@@ -4,6 +4,7 @@
 //  - Design ReadMe          status, owners and links on a section, drawn as a card inside it
 //  - Frame Note             designer notes drawn as a card right below a frame
 //  - Image Optimizer        shrinks oversized images to the size they are displayed at
+//  - Title Maker            adds a title bar above selected frames and lines them up
 //
 // Every tool is also in the plugin's menu (manifest `menu`); picking one there opens this plugin
 // straight on that tool (figma.command). The tools keep the storage keys of the separate plugins
@@ -14,7 +15,7 @@
 
 figma.showUI(__html__, { width: 360, height: 600, themeColors: true });
 
-const TOOLS = ['checklist', 'readme', 'note', 'images'];
+const TOOLS = ['checklist', 'readme', 'note', 'images', 'titles'];
 const LANG_KEY = 'pyde-lang';
 const ADMIN_KEY = 'pyde-admin-token';
 let lang = 'en';
@@ -52,11 +53,12 @@ function relaunch(node, data) {
   try { node.setRelaunchData(data); } catch (e) {}
 }
 
-// The cards drawn by Design ReadMe and Frame Note are frames that sit directly in a section, like
-// the designs themselves. The other tools ignore them.
+// The cards drawn by Design ReadMe and Frame Note, and the titles made by Title Maker, are frames that
+// sit directly in a section, like the designs themselves. The other tools ignore them.
 function isToolCard(node) {
   return node.type === 'FRAME' &&
-    (node.getSharedPluginData('pydespec', 'card') !== '' || node.getSharedPluginData('pydenote', 'card') !== '');
+    (node.getSharedPluginData('pydespec', 'card') !== '' || node.getSharedPluginData('pydenote', 'card') !== '' ||
+     node.getSharedPluginData('pydetitle', 'title') !== '');
 }
 
 // =====================================================================================
@@ -696,6 +698,26 @@ const ReadMe = (() => {
     figma.notify(t('Design ReadMe removed', 'Tasarım künyesi kaldırıldı'));
   }
 
+  // Sizes the section to its content with SECTION_FIT on every side. The content keeps its place on
+  // the canvas: the section moves and resizes around it. Works on any section, with or without a ReadMe.
+  const SECTION_FIT = 96;
+  async function fit(id) {
+    const section = await getSection(id);
+    if (!section) return;
+    const kids = section.children.filter((c) => c.visible);
+    if (!kids.length) return figma.notify(t('The section is empty.', 'Section boş.'));
+    const minX = Math.min.apply(null, kids.map((c) => c.x));
+    const minY = Math.min.apply(null, kids.map((c) => c.y));
+    const maxX = Math.max.apply(null, kids.map((c) => c.x + c.width));
+    const maxY = Math.max.apply(null, kids.map((c) => c.y + c.height));
+    const dx = SECTION_FIT - minX, dy = SECTION_FIT - minY;
+    for (const c of section.children) { c.x += dx; c.y += dy; }
+    section.x -= dx;
+    section.y -= dy;
+    section.resizeWithoutConstraints(maxX - minX + 2 * SECTION_FIT, maxY - minY + 2 * SECTION_FIT);
+    figma.notify(t('Section fitted to its content', 'Section içeriğe sığdırıldı'));
+  }
+
   async function goTo(id) {
     const node = await figma.getNodeByIdAsync(id);
     if (!node || node.removed) {
@@ -726,6 +748,7 @@ const ReadMe = (() => {
     }
     if (msg.type === 'goto') return goTo(msg.id);
     if (msg.type === 'forgetPerson') { await forgetPerson(String(msg.name)); return sendPeople(); }
+    if (msg.type === 'fit') { await fit(msg.id); return pushState(); }
   }
 
   async function activate() {
@@ -792,9 +815,10 @@ const Note = (() => {
     return data.entries.reduce((a, e) => (e.at > a.at ? e : a), data.entries[0]);
   }
 
-  // A Design ReadMe card is a frame in a section too, but it never gets a note.
+  // Design ReadMe cards and titles are frames in a section too, but they never get a note.
   function isFrame(node) {
-    return FRAME_TYPES.indexOf(node.type) !== -1 && node.getSharedPluginData('pydespec', 'card') === '';
+    return FRAME_TYPES.indexOf(node.type) !== -1 && node.getSharedPluginData('pydespec', 'card') === '' &&
+      node.getSharedPluginData('pydetitle', 'title') === '';
   }
   // Cards are placed next to their frame, which is only possible when the frame isn't inside
   // auto layout, a component set or an instance.
@@ -1355,7 +1379,12 @@ const Note = (() => {
     runSync();
   }
 
-  return { start, onPageChange, activate: pushState, refresh: pushState, onMessage };
+  // The card of a frame, if it has a note (Title Maker lays a frame out together with its card).
+  function cardOf(frame) {
+    return readNote(frame) ? findCard(frame) : null;
+  }
+
+  return { start, onPageChange, activate: pushState, refresh: pushState, onMessage, cardOf };
 })();
 
 // =====================================================================================
@@ -1607,10 +1636,280 @@ const Images = (() => {
 })();
 
 // =====================================================================================
+// Title Maker ("Başlık Ekleyici"): adds a title bar above the selected frames, and optionally pushes
+// the content below down and lines the frames up in rows.
+//
+// The title is a plain frame named "🏷 Title" with one text layer. Its text is edited on the canvas
+// like any other text; the plugin never redraws it. Copying a title is fine too: nothing ties a title
+// to its frames except where it sits.
+// =====================================================================================
+
+const Titles = (() => {
+  const NS = 'pydetitle'; // namespace may only contain letters and digits
+  const KEY = 'title';
+  const NAME = '🏷 Title';
+  const HEIGHT = 72;
+  const GAP = 48; // between the title and the frames, and between frames
+  const FRAME_TYPES = ['FRAME', 'COMPONENT', 'COMPONENT_SET', 'INSTANCE'];
+  const PREFS_KEY = 'pyde-title-prefs';
+  const SECTION_PAD = 96; // room kept above a title that would stick out of the top of its section
+
+  // DM Sans comes with Figma (all Google Fonts do). Its style is called "SemiBold"; the other spelling
+  // and Inter are only fallbacks.
+  const FONTS = [
+    { family: 'DM Sans', style: 'SemiBold' },
+    { family: 'DM Sans', style: 'Semi Bold' },
+    { family: 'Inter', style: 'Semi Bold' }
+  ];
+  async function loadFont() {
+    for (const f of FONTS) {
+      try { await figma.loadFontAsync(f); return f; } catch (e) {}
+    }
+    throw new Error(t('No font could be loaded for the title.', 'Başlık için font yüklenemedi.'));
+  }
+
+  // The frames a selection points at: for each selected layer, the top-level layer it sits in
+  // (directly in a section or on the page). Titles and the ReadMe / note cards are skipped.
+  function topLevel(node) {
+    let top = node;
+    while (top.parent && top.parent.type !== 'SECTION' && top.parent.type !== 'PAGE') top = top.parent;
+    return top;
+  }
+  function isTitle(node) {
+    return node.type === 'FRAME' && (node.getSharedPluginData(NS, KEY) !== '' || node.name === NAME);
+  }
+  function selectedFrames() {
+    const seen = new Set();
+    const frames = [];
+    for (const n of figma.currentPage.selection) {
+      const top = topLevel(n);
+      if (FRAME_TYPES.indexOf(top.type) === -1 || isToolCard(top) || isTitle(top) || seen.has(top.id)) continue;
+      seen.add(top.id);
+      frames.push(top);
+    }
+    return frames;
+  }
+
+  function pushState() {
+    const frames = selectedFrames();
+    if (!frames.length) return post('titles', { type: 'state', status: 'none' });
+    const parent = frames[0].parent;
+    if (frames.some((f) => f.parent.id !== parent.id)) return post('titles', { type: 'state', status: 'mixed' });
+    post('titles', {
+      type: 'state', status: 'ok', count: frames.length,
+      name: frames.length === 1 ? frames[0].name : null,
+      section: parent.type === 'SECTION' ? parent.name : null,
+      page: figma.currentPage.name
+    });
+  }
+
+  // ---------- Building the title ----------
+
+  function rgb(h) {
+    const c = hex(h);
+    return { r: c.r, g: c.g, b: c.b, a: 1 };
+  }
+
+  function createTitle(text, font) {
+    const f = figma.createFrame();
+    f.name = NAME;
+    f.setSharedPluginData(NS, KEY, '1');
+    f.layoutMode = 'HORIZONTAL';
+    f.primaryAxisSizingMode = 'FIXED';
+    f.counterAxisSizingMode = 'AUTO';
+    f.counterAxisAlignItems = 'CENTER';
+    f.paddingLeft = f.paddingRight = 32;
+    f.paddingTop = f.paddingBottom = 18; // 18 + 36 + 18 = 72
+    f.cornerRadius = 8;
+    f.clipsContent = true;
+    // Top to bottom: #7B7D83 → #5C5E66.
+    f.fills = [{
+      type: 'GRADIENT_LINEAR',
+      gradientTransform: [[0, 1, 0], [-1, 0, 1]],
+      gradientStops: [{ position: 0, color: rgb('#7B7D83') }, { position: 1, color: rgb('#5C5E66') }]
+    }];
+    f.strokes = [solid('#FFFFFF', 0.6)];
+    f.strokeWeight = 1;
+    f.strokeAlign = 'INSIDE';
+
+    const tx = figma.createText();
+    tx.fontName = font;
+    tx.fontSize = 34;
+    tx.lineHeight = { unit: 'PIXELS', value: 36 };
+    tx.letterSpacing = { unit: 'PIXELS', value: -0.5 };
+    tx.characters = text;
+    tx.fills = [solid('#FFFFFF')];
+    f.appendChild(tx);
+    tx.layoutGrow = 1;
+    tx.textAutoResize = 'HEIGHT';
+    return f;
+  }
+
+  // ---------- Layout ----------
+
+  // A frame with a Frame Note is laid out together with its card, so the card never lands on the next row.
+  function block(frame) {
+    const card = Note.cardOf(frame);
+    const bottom = card && card.parent && card.parent.id === frame.parent.id ? card.y + card.height : frame.y + frame.height;
+    return { frame, h: Math.max(frame.height, bottom - frame.y) };
+  }
+
+  // Rows follow how the frames are placed now: a frame whose top is above the middle of a row's
+  // shortest frame belongs to that row. Each row is laid out left to right, 48 apart, aligned at the top.
+  function tile(frames, left, top) {
+    const blocks = frames.map(block).sort((a, b) => a.frame.y - b.frame.y || a.frame.x - b.frame.x);
+    const rows = [];
+    for (const b of blocks) {
+      const row = rows[rows.length - 1];
+      if (row && b.frame.y < row.top + row.minH / 2) {
+        row.items.push(b);
+        row.minH = Math.min(row.minH, b.frame.height);
+      } else {
+        rows.push({ top: b.frame.y, minH: b.frame.height, items: [b] });
+      }
+    }
+    let y = top;
+    let width = 0;
+    for (const row of rows) {
+      row.items.sort((a, b) => a.frame.x - b.frame.x);
+      let x = left;
+      let h = 0;
+      for (const b of row.items) {
+        b.frame.x = x;
+        b.frame.y = y;
+        x += b.frame.width + GAP;
+        h = Math.max(h, b.h);
+      }
+      width = Math.max(width, x - GAP - left);
+      y += h + GAP;
+    }
+    return { width, bottom: y - GAP };
+  }
+
+  function groupBottom(frames) {
+    return Math.max.apply(null, frames.map((f) => { const b = block(f); return f.y + b.h; }));
+  }
+
+  // Sibling layers the title covers.
+  function overlaps(title) {
+    return title.parent.children.filter((c) => c.id !== title.id && c.visible &&
+      c.x < title.x + title.width && c.x + c.width > title.x &&
+      c.y < title.y + title.height && c.y + c.height > title.y).map((c) => c.name);
+  }
+
+  async function add(msg) {
+    const text = String(msg.text || '').trim();
+    const frames = selectedFrames();
+    if (!text || !frames.length) return;
+    const parent = frames[0].parent;
+    if (frames.some((f) => f.parent.id !== parent.id)) {
+      return figma.notify(t('The frames must be in the same section.', 'Frame’ler aynı section’da olmalı.'), { error: true });
+    }
+    const font = await loadFont();
+
+    const left = Math.min.apply(null, frames.map((f) => f.x));
+    const top = Math.min.apply(null, frames.map((f) => f.y));
+    const right = Math.max.apply(null, frames.map((f) => f.x + f.width));
+    const shift = HEIGHT + GAP;
+
+    // Everything else in the section (or on the page) that starts at or below the top frame moves down.
+    // The selected frames' note cards are left to Frame Note, which keeps them under their frames.
+    const own = new Set(frames.map((f) => f.id));
+    frames.forEach((f) => { const c = Note.cardOf(f); if (c) own.add(c.id); });
+    const below = msg.push ? parent.children.filter((c) => !own.has(c.id) && c.y >= top - 0.5) : [];
+
+    const oldBottom = groupBottom(frames);
+    const titleY = msg.push ? top : top - shift;
+    if (msg.push) {
+      below.forEach((c) => { c.y += shift; });
+      frames.forEach((f) => { f.y += shift; });
+    }
+
+    let width = right - left;
+    let pushed = msg.push ? shift : 0;
+    if (msg.align) {
+      const r = tile(frames, left, titleY + shift);
+      width = r.width;
+      // If lining up made the group taller, what was pushed moves down by the difference too.
+      const grew = r.bottom - (oldBottom + pushed);
+      if (msg.push && grew > 0) {
+        below.forEach((c) => { c.y += grew; });
+        pushed += grew;
+      }
+    }
+
+    const title = createTitle(text, font);
+    const index = Math.max.apply(null, frames.map((f) => parent.children.findIndex((c) => c.id === f.id)));
+    parent.insertChild(index + 1, title);
+    title.x = left;
+    title.y = titleY;
+    title.resize(Math.max(1, width), title.height);
+    // resize() fixes both sizes; the height goes back to hugging the text.
+    title.primaryAxisSizingMode = 'FIXED';
+    title.counterAxisSizingMode = 'AUTO';
+
+    if (parent.type === 'SECTION') fitSection(parent, title, pushed);
+    figma.currentPage.selection = [title];
+    figma.commitUndo();
+
+    const o = msg.push ? [] : overlaps(title);
+    if (o.length) {
+      figma.notify(t('The title overlaps “' + o[0] + '”' + (o.length > 1 ? ' and ' + (o.length - 1) + ' more' : '') + '.',
+        'Başlık “' + o[0] + '”' + (o.length > 1 ? ' ve ' + (o.length - 1) + ' katman daha' : '') + ' ile çakışıyor.'));
+    } else {
+      figma.notify(t('Title added', 'Başlık eklendi'));
+    }
+    if (font.family !== 'DM Sans') {
+      figma.notify(t('DM Sans couldn’t be loaded, the title uses ' + font.family + '.',
+        'DM Sans yüklenemedi, başlıkta ' + font.family + ' kullanıldı.'));
+    }
+  }
+
+  // Grows the section by what was pushed down (so the space below the content stays the same), and
+  // further around its content when something still sticks out: to the right / bottom, and upwards when
+  // the title sits above its top edge (the content keeps its place on the canvas).
+  function fitSection(section, title, pushed) {
+    if (pushed > 0) section.resizeWithoutConstraints(section.width, section.height + pushed);
+    if (title.y < 0) {
+      const d = SECTION_PAD - title.y;
+      for (const c of section.children) c.y += d;
+      section.y -= d;
+      section.resizeWithoutConstraints(section.width, section.height + d);
+    }
+    let maxR = 0, maxB = 0;
+    for (const c of section.children) {
+      maxR = Math.max(maxR, c.x + c.width);
+      maxB = Math.max(maxB, c.y + c.height);
+    }
+    const w = Math.max(section.width, maxR + SECTION_PAD);
+    const h = Math.max(section.height, maxB + SECTION_PAD);
+    if (w !== section.width || h !== section.height) section.resizeWithoutConstraints(w, h);
+  }
+
+  async function activate() {
+    const prefs = (await figma.clientStorage.getAsync(PREFS_KEY)) || {};
+    post('titles', { type: 'prefs', push: prefs.push !== false, align: prefs.align !== false });
+    pushState();
+  }
+
+  async function onMessage(msg) {
+    if (msg.type === 'refresh') return pushState();
+    if (msg.type === 'setPrefs') return figma.clientStorage.setAsync(PREFS_KEY, { push: !!msg.push, align: !!msg.align });
+    if (msg.type === 'add') {
+      await add(msg);
+      post('titles', { type: 'done' });
+      return pushState();
+    }
+  }
+
+  return { activate, refresh: pushState, onMessage, isTitle };
+})();
+
+// =====================================================================================
 // Router
 // =====================================================================================
 
-const MODULES = { checklist: Checklist, readme: ReadMe, note: Note, images: Images };
+const MODULES = { checklist: Checklist, readme: ReadMe, note: Note, images: Images, titles: Titles };
 
 figma.on('selectionchange', () => {
   if (MODULES[active]) MODULES[active].refresh();

@@ -7,6 +7,7 @@ The Pyde Design team's Figma tools in one plugin:
 | **Handoff Pre Checklist** | A handoff checklist stored on a root frame or section. |
 | **Design ReadMe** (*Tasarım Künyesi*) | Status, owners, Jira / Slack links and notes on a section, drawn as a yellow card inside it. |
 | **Frame Note** (*Frame Notu*) | Designer notes drawn as a yellow card right below a frame. |
+| **Title Maker** (*Başlık Ekleyici*) | Adds a title bar above selected frames, pushes the content below down and lines the frames up. |
 | **Image Optimizer** | Shrinks oversized images to the pixel size they are displayed at (2x / 3x / 4x). |
 
 Run **Plugins → Pyde Design → Pyde Design** to get the list of tools, or pick a tool from the same menu to open the plugin straight on it. The **Edit Design ReadMe** and **Edit Frame Note** buttons in the right panel open it on that tool too.
@@ -79,6 +80,8 @@ Don't edit the card's text by hand — it is redrawn from the form on every save
 
 The section name shows its status after an em dash, updated on every save: `Checkout Flow — 🚧 Work in progress`, `— 👀 In review`, `— ✅ Ready for development`. Removing the ReadMe removes the suffix.
 
+**Fit section** (under the selected section) sizes the section to its content with 96 px on every side. The content keeps its place on the canvas; the section moves and resizes around it. It works on any section, with or without a ReadMe.
+
 The **Overview** tab lists every ReadMe in the file. The current page is rescanned each time you open the tab; other pages show their last known state. **Scan all pages** refreshes everything.
 
 ### Owner suggestions
@@ -102,6 +105,15 @@ The card appears right below the frame, exactly as wide as the frame, in the sam
 - While the plugin is open (on any tool), a card follows its frame when the frame is moved, resized or renamed. Anything that drifted while the plugin was closed is fixed the next time it is opened on that page.
 - Duplicating a frame duplicates its note. Deleting a frame leaves its card behind, renamed `📝 Note (frame deleted) → …`; delete it from the **Overview** tab or by selecting it.
 - Don't delete a card to remove a note — use **Remove** in the plugin.
+
+## Title Maker
+
+Select one or more frames (in the same section, or all directly on the page), type the title and click **Add title** (or press Enter).
+
+- **Push everything below down** (on by default): the title takes the top frame's place, and the selected frames and everything below them in the section (or on the page) move down 120 px (72 px title + 48 px gap). The section grows by the same amount. Off: nothing moves and the title goes 48 px above the top frame; the plugin warns if it covers something there, and grows the section upwards if the title sticks out of its top.
+- **Line up the frames** (on by default): rows follow how the frames are placed now (frames that overlap vertically are one row). Each row starts 48 px below the title (or the row above), frames are 48 px apart and aligned at the top. A frame with a Frame Note counts together with its card, so notes never land on the next row. If this makes the group taller, the content below moves down by the difference too.
+
+The title is as wide as the frames (the widest row when lined up). It is a frame named `🏷 Title` with one text layer: DM Sans Semi Bold 34 / 36, white, on a `#7B7D83` → `#5C5E66` gradient with a white 60% border and 8 px corners. Edit its text on the canvas like any other text; copying a title is fine. The two checkboxes are remembered per person.
 
 ## Image Optimizer
 
@@ -133,4 +145,8 @@ placed right below the frame in the same section (or on the page, if the frame i
   e.g. node-id=12-345 is 12:345). Read it with get_design_context.
 - Treat the notes as requirements for that frame. If a note contradicts the design, ask before implementing.
 - Layers named "📝 Note (frame deleted) → …" are leftovers; ignore them.
+
+## Figma titles
+Layers named "🏷 Title" are headings for the frames right below them (their text is the name of that
+group of screens). They are labels, not UI to implement.
 ```

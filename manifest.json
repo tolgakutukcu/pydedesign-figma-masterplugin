@@ -13,6 +13,7 @@
     { "name": "Handoff Pre Checklist", "command": "checklist" },
     { "name": "Design ReadMe", "command": "readme" },
     { "name": "Frame Note", "command": "note" },
+    { "name": "Title Maker", "command": "titles" },
     { "name": "Image Optimizer", "command": "images" }
   ],
   "relaunchButtons": [

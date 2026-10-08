@@ -194,7 +194,8 @@
   body[data-screen="checklist"] #s-checklist,
   body[data-screen="readme"] #s-readme,
   body[data-screen="note"] #s-note,
-  body[data-screen="images"] #s-images { display: flex; }
+  body[data-screen="images"] #s-images,
+  body[data-screen="titles"] #s-titles { display: flex; }
 
   .f-head { flex: none; padding: 10px 16px 0 10px; border-bottom: 1px solid var(--figma-color-border); }
   .f-title { display: flex; align-items: center; gap: 6px; min-height: 28px; padding-bottom: 10px; }
@@ -441,6 +442,24 @@
   #s-images .info { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #s-images .status { margin-top: 10px; min-height: 16px; font-size: 11px; color: var(--figma-color-text-secondary); text-align: center; }
 
+  /* ---------- Title Maker ---------- */
+  #s-titles.no-target .placeholder { display: flex; }
+  #s-titles.no-target #tt-form { display: none; }
+  #s-titles.has-target .f-foot { display: flex; }
+  .check {
+    display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; margin-bottom: 6px; cursor: pointer;
+    border-radius: 10px; border: 1px solid var(--figma-color-border); background: var(--figma-color-bg);
+  }
+  .check:hover { background: var(--figma-color-bg-hover); }
+  .check input { flex: none; margin: 2px 0 0; accent-color: var(--figma-color-text); cursor: pointer; }
+  .check b { display: block; font-weight: 600; }
+  .check small { display: block; margin-top: 2px; font-size: 11px; color: var(--figma-color-text-secondary); }
+
+  /* Design ReadMe: fit the section to its content */
+  #s-readme .fit-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
+  #s-readme .fit-row .hint { margin: 0; }
+  #s-readme .fit-row .btn { flex: none; }
+
   /* ---------- Settings ---------- */
   .settings {
     position: fixed; inset: var(--bar-h) 0 0 0; z-index: 5; display: none; flex-direction: column; background: var(--figma-color-bg);
@@ -604,6 +623,11 @@
         <span class="t-meta"><b data-i18n="noteName"></b><span data-i18n="noteDesc"></span></span>
         <svg class="chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3l5 5-5 5"/></svg>
       </button>
+      <button class="tool" data-go="titles">
+        <span class="t-ico"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="2.5" width="15" height="4.5" rx="1.2"/><rect x="2.5" y="10" width="6.5" height="7.5" rx="1"/><rect x="11" y="10" width="6.5" height="7.5" rx="1"/></svg></span>
+        <span class="t-meta"><b data-i18n="titlesName"></b><span data-i18n="titlesDesc"></span></span>
+        <svg class="chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3l5 5-5 5"/></svg>
+      </button>
       <button class="tool" data-go="images">
         <span class="t-ico"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3.5" width="15" height="13" rx="2"/><circle cx="7" cy="8" r="1.5"/><path d="M17.5 13l-4-4-8 7.5"/></svg></span>
         <span class="t-meta"><b data-i18n="imagesName"></b><span data-i18n="imagesDesc"></span></span>
@@ -683,6 +707,10 @@
               <div class="sub" id="rm-targetSub"></div>
             </div>
             <span class="badge" id="rm-badge"></span>
+          </div>
+          <div class="fit-row">
+            <span class="hint" data-i18n="fitHint"></span>
+            <button class="btn small" id="rm-fit" data-i18n="fit"></button>
           </div>
 
           <div class="banner info" id="rm-staleBanner">
@@ -942,6 +970,56 @@
     </footer>
   </div>
 
+  <!-- ==================== Title Maker ==================== -->
+  <div class="screen feature no-target" id="s-titles">
+    <div class="f-head">
+      <div class="f-title">
+        <button class="icon-btn back" data-i18n-title="back"></button>
+        <h1 data-i18n="appTitle"></h1>
+      </div>
+    </div>
+
+    <main class="scroll">
+      <div class="placeholder">
+        <div class="big" id="tt-phIco"></div>
+        <b id="tt-phTitle"></b>
+        <span id="tt-phText"></span>
+      </div>
+
+      <div id="tt-form">
+        <div class="target">
+          <div class="ico" id="tt-targetIco"></div>
+          <div class="meta">
+            <div class="name" id="tt-targetName"></div>
+            <div class="sub" id="tt-targetSub"></div>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="lbl" data-i18n="titleLbl"></div>
+          <input class="input" id="tt-text" data-i18n-placeholder="titlePh">
+          <div class="hint" data-i18n="afterHint"></div>
+        </div>
+
+        <div class="field">
+          <label class="check">
+            <input type="checkbox" id="tt-push" checked>
+            <span><b data-i18n="push"></b><small data-i18n="pushHint"></small></span>
+          </label>
+          <label class="check">
+            <input type="checkbox" id="tt-align" checked>
+            <span><b data-i18n="align"></b><small data-i18n="alignHint"></small></span>
+          </label>
+        </div>
+      </div>
+    </main>
+
+    <footer class="f-foot">
+      <div class="info"></div>
+      <button class="btn primary" id="tt-add"></button>
+    </footer>
+  </div>
+
   <!-- ==================== Settings ==================== -->
   <div class="settings">
     <div class="s-head">
@@ -1068,13 +1146,13 @@
 
 <script>
 // Only this plugin as a whole has a version; the tools inside it don't.
-const VERSION = '1.3.0';
+const VERSION = '1.4.0';
 const REPO = 'tolgakutukcu/pydedesign-figma-masterplugin';
 const RAW = 'https://raw.githubusercontent.com/' + REPO + '/main/';
 const VERSION_URL = RAW + 'version.json';
 document.getElementById('download').href = 'https://github.com/' + REPO + '/archive/refs/heads/main.zip';
 
-const TOOLS = ['checklist', 'readme', 'note', 'images'];
+const TOOLS = ['checklist', 'readme', 'note', 'images', 'titles'];
 const X = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 2l6 6M8 2l-6 6"/></svg>';
 const BACK = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3L5 8l5 5"/></svg>';
 const POINTER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M5 3l14 7-6 2-2 6L5 3z"/></svg>';
@@ -1089,6 +1167,7 @@ const STRINGS = {
     readmeName: 'Design ReadMe', readmeDesc: 'Status, owners and links on a section, for developers and Claude.',
     noteName: 'Frame Note', noteDesc: 'Notes for developers, right below a frame.',
     imagesName: 'Image Optimizer', imagesDesc: 'Shrinks oversized images to the size they are shown at.',
+    titlesName: 'Title Maker', titlesDesc: 'Adds a title above selected frames and lines them up.',
     homeHint: 'Every tool can also be opened directly from Plugins → Pyde Design.',
     updTitle: 'Update required',
     updText: 'A newer version of Pyde Design is available. Please download it to keep using its tools.',
@@ -1109,6 +1188,7 @@ const STRINGS = {
     readmeName: 'Tasarım Künyesi', readmeDesc: 'Section’a durum, sorumlular ve linkler; developer’lar ve Claude için.',
     noteName: 'Frame Notu', noteDesc: 'Developer’lar için notlar, frame’in hemen altında.',
     imagesName: 'Image Optimizer', imagesDesc: 'Büyük görselleri gösterildikleri boyuta küçültür.',
+    titlesName: 'Başlık Ekleyici', titlesDesc: 'Seçili frame’lerin üstüne başlık ekler ve onları hizalar.',
     homeHint: 'Her araç Plugins → Pyde Design menüsünden doğrudan da açılabilir.',
     updTitle: 'Güncelleme gerekli',
     updText: 'Pyde Design’ın daha yeni bir sürümü var. Araçları kullanmaya devam etmek için lütfen indir.',
@@ -1387,7 +1467,8 @@ const ReadMe = (() => {
       discard: 'Discard changes',
       ovHint: 'ReadMes on the current page are refreshed every time you open this tab. Other pages show their last known state.',
       scanAll: 'Scan all pages', scanning: 'Scanning…', all: 'All', current: 'current page',
-      ovEmpty: 'No ReadMes in this file yet.', ovEmptyFilter: 'No ReadMes with this status.'
+      ovEmpty: 'No ReadMes in this file yet.', ovEmptyFilter: 'No ReadMes with this status.',
+      fit: 'Fit section', fitHint: 'Sizes the section to its content, 96 px on every side.'
     },
     tr: {
       back: 'Geri', appTitle: 'Tasarım Künyesi',
@@ -1415,7 +1496,8 @@ const ReadMe = (() => {
       discard: 'Değişiklikleri at',
       ovHint: 'Bulunduğun sayfadaki künyeler bu sekmeyi her açtığında yenilenir. Diğer sayfalar bilinen son durumu gösterir.',
       scanAll: 'Tüm sayfaları tara', scanning: 'Taranıyor…', all: 'Tümü', current: 'bu sayfa',
-      ovEmpty: 'Bu dosyada henüz künye yok.', ovEmptyFilter: 'Bu durumda künye yok.'
+      ovEmpty: 'Bu dosyada henüz künye yok.', ovEmptyFilter: 'Bu durumda künye yok.',
+      fit: 'Section’ı sığdır', fitHint: 'Section’ı içeriğine göre boyutlar, her yönden 96 px.'
     }
   };
 
@@ -1843,6 +1925,8 @@ const ReadMe = (() => {
     team = names.slice();
     renderPeople();
   }
+
+  $('fit').onclick = () => { if (editing) send({ f: 'readme', type: 'fit', id: editing.id }); };
 
   return { applyLang, onMessage, save, onLeave: hideSuggest, setTeam };
 })();
@@ -3213,10 +3297,115 @@ const Admin = (() => {
 })();
 
 // =====================================================================================
+// Title Maker
+// =====================================================================================
+
+const Titles = (() => {
+  const root = document.getElementById('s-titles');
+  const $ = (id) => document.getElementById('tt-' + id);
+
+  const S = {
+    en: {
+      back: 'Back', appTitle: 'Title Maker',
+      emptyTitle: 'Select frames',
+      emptyText: 'Select one or more frames to add a title above them.',
+      mixedTitle: 'Select frames in one section',
+      mixedText: 'The selected frames are in different sections. A title goes above frames that sit together.',
+      count: (n) => n + (n === 1 ? ' frame' : ' frames') + ' selected',
+      inSection: (s) => 'in section “' + s + '”',
+      titleLbl: 'Title', titlePh: 'e.g. Requirement Confirmation Dialog',
+      push: 'Push everything below down',
+      pushHint: 'The title takes the top frame’s place; the frames and everything below them in the section move down 120 px. Off: nothing moves, the title goes 48 px above the frames.',
+      align: 'Line up the frames',
+      alignHint: 'Rows follow how the frames are placed now: 48 px below the title, 48 px apart, aligned at the top. Off: the frames stay as they are.',
+      add: 'Add title', adding: 'Adding…',
+      afterHint: 'Edit the title’s text on the canvas like any other text.'
+    },
+    tr: {
+      back: 'Geri', appTitle: 'Başlık Ekleyici',
+      emptyTitle: 'Frame seç',
+      emptyText: 'Üstüne başlık eklemek için bir veya daha fazla frame seç.',
+      mixedTitle: 'Aynı section’daki frame’leri seç',
+      mixedText: 'Seçili frame’ler farklı section’larda. Başlık, bir arada duran frame’lerin üstüne eklenir.',
+      count: (n) => n + ' frame seçili',
+      inSection: (s) => '“' + s + '” section’ında',
+      titleLbl: 'Başlık', titlePh: 'Örn. Requirement Confirmation Dialog',
+      push: 'Altındaki her şeyi aşağı it',
+      pushHint: 'Başlık en üstteki frame’in yerine gelir; frame’ler ve section’da altlarında kalan her şey 120 px aşağı iner. Kapalıysa hiçbir şey kıpırdamaz, başlık frame’lerin 48 px üstüne konur.',
+      align: 'Frame’leri hizala',
+      alignHint: 'Satırlar frame’lerin şu anki yerleşimine göre oluşur: başlığın 48 px altından başlar, aralarında 48 px, üstten hizalı. Kapalıysa frame’lere dokunulmaz.',
+      add: 'Başlık ekle', adding: 'Ekleniyor…',
+      afterHint: 'Başlığın metnini canvas’ta normal bir text gibi düzenleyebilirsin.'
+    }
+  };
+
+  const ICON_FRAMES = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><rect x="2" y="2" width="8" height="8" rx="1"/><path d="M6 13h7a1 1 0 0 0 1-1V5"/></svg>';
+  const t = () => S[lang];
+  let lastState = { status: 'none' };
+  let busy = false;
+
+  function render(m) {
+    lastState = m;
+    root.classList.toggle('no-target', m.status !== 'ok');
+    root.classList.toggle('has-target', m.status === 'ok');
+    if (m.status !== 'ok') {
+      $('phIco').innerHTML = POINTER;
+      $('phTitle').textContent = t()[m.status === 'mixed' ? 'mixedTitle' : 'emptyTitle'];
+      $('phText').textContent = t()[m.status === 'mixed' ? 'mixedText' : 'emptyText'];
+      return;
+    }
+    $('targetIco').innerHTML = ICON_FRAMES;
+    $('targetName').textContent = m.name || t().count(m.count);
+    $('targetSub').textContent = (m.name ? t().count(m.count) + ' · ' : '') + (m.section ? t().inSection(m.section) : m.page);
+    renderFooter();
+  }
+
+  function renderFooter() {
+    $('add').textContent = busy ? t().adding : t().add;
+    $('add').disabled = busy || lastState.status !== 'ok' || !$('text').value.trim();
+  }
+
+  function savePrefs() {
+    send({ f: 'titles', type: 'setPrefs', push: $('push').checked, align: $('align').checked });
+  }
+
+  function add() {
+    if ($('add').disabled) return;
+    busy = true;
+    renderFooter();
+    send({ f: 'titles', type: 'add', text: $('text').value, push: $('push').checked, align: $('align').checked });
+  }
+
+  function applyLang() {
+    translate(root, t());
+    render(lastState);
+    renderFooter();
+  }
+
+  function onMessage(m) {
+    if (m.type === 'state') render(m);
+    else if (m.type === 'prefs') { $('push').checked = m.push; $('align').checked = m.align; }
+    else if (m.type === 'done' || m.type === 'error') {
+      if (m.type === 'done') $('text').value = '';
+      busy = false;
+      renderFooter();
+    }
+  }
+
+  $('text').oninput = renderFooter;
+  $('text').onkeydown = (e) => { if (e.key === 'Enter') add(); };
+  $('push').onchange = savePrefs;
+  $('align').onchange = savePrefs;
+  $('add').onclick = add;
+
+  return { applyLang, onMessage, save: add };
+})();
+
+// =====================================================================================
 // Shell: navigation, language, version check
 // =====================================================================================
 
-const MODULES = { checklist: Checklist, readme: ReadMe, note: Note, images: Images };
+const MODULES = { checklist: Checklist, readme: ReadMe, note: Note, images: Images, titles: Titles };
 const $ = (id) => document.getElementById(id);
 
 // Shows the home screen (null) or a tool, and tells code.js which tool is on screen.
@@ -3302,6 +3491,7 @@ document.addEventListener('keydown', (e) => {
   if (!(e.metaKey || e.ctrlKey) || e.key !== 'Enter') return;
   if (screen === 'readme') ReadMe.save();
   else if (screen === 'note') Note.save();
+  else if (screen === 'titles') Titles.save();
 });
 
 onmessage = (e) => {
