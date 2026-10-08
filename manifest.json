@@ -20,7 +20,7 @@
     { "command": "note", "name": "Edit Frame Note" }
   ],
   "networkAccess": {
-    "allowedDomains": ["https://raw.githubusercontent.com"],
-    "reasoning": "Checks the latest plugin version and loads the team name list from GitHub."
+    "allowedDomains": ["https://raw.githubusercontent.com", "https://api.github.com"],
+    "reasoning": "Checks the latest plugin version and loads the team and checklist lists from GitHub. The admin screen saves those lists to the GitHub repo."
   }
 }

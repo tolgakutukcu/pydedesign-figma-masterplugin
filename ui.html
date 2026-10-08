@@ -49,6 +49,7 @@
   .bar .icon-btn { color: rgba(255, 255, 255, .85); }
   .bar .icon-btn:hover { background: rgba(255, 255, 255, .14); color: #fff; }
   body.checking #openSettings, body.check-failed #openSettings, body.outdated #openSettings { visibility: hidden; }
+  body.checking .admin, body.check-failed .admin, body.outdated .admin { display: none !important; }
 
   /* ---------- Common controls ---------- */
   .icon-btn {
@@ -449,6 +450,84 @@
   .s-head h2 { margin: 0; font-size: 14px; letter-spacing: -.01em; }
   .s-body { padding: 16px; display: flex; flex-direction: column; gap: 18px; }
   .s-ver { color: var(--figma-color-text-tertiary); font-size: 11px; }
+
+  .admin-link {
+    align-self: flex-start; margin-top: 10px; padding: 2px 0; border: 0; background: none; cursor: pointer;
+    font-size: 11px; color: var(--figma-color-text-tertiary); opacity: .6;
+  }
+  .admin-link:hover { opacity: 1; text-decoration: underline; }
+
+  /* ---------- Admin: edits checklist.json / team.json in the GitHub repo ---------- */
+  .admin {
+    position: fixed; inset: var(--bar-h) 0 0 0; z-index: 6; display: none; flex-direction: column; background: var(--figma-color-bg);
+  }
+  body.admin-open .admin { display: flex; }
+  .admin .s-head { flex: none; }
+  .admin .s-head h2 { flex: 1; }
+  #ad-connect, #ad-main { flex: 1; min-height: 0; display: none; flex-direction: column; }
+  .admin.connected #ad-main, .admin:not(.connected) #ad-connect { display: flex; }
+  #ad-connect { overflow-y: auto; padding: 16px; gap: 12px; }
+  #ad-connect p { margin: 0; color: var(--figma-color-text-secondary); }
+  #ad-connect ol { margin: 0; padding-left: 18px; color: var(--figma-color-text-secondary); }
+  #ad-connect ol li { margin-bottom: 4px; }
+  #ad-connect a { color: var(--figma-color-text); }
+  .ad-tabs { flex: none; padding: 0 16px; border-bottom: 1px solid var(--figma-color-border); }
+  .ad-tabs .dot { display: none; width: 6px; height: 6px; margin-left: 5px; border-radius: 50%; background: var(--wip); vertical-align: 1px; }
+  .ad-tabs button.dirty .dot { display: inline-block; }
+  .admin .scroll { padding-top: 12px; }
+  .admin .view { display: none; }
+  .admin[data-tab="checklist"] #ad-checklist, .admin[data-tab="team"] #ad-team { display: block; }
+  .admin .f-foot { display: flex; }
+  .admin .banner { margin: 0 0 12px; }
+  .ad-loading { padding: 40px 12px; text-align: center; color: var(--figma-color-text-secondary); display: none; }
+  .admin.loading .ad-loading { display: block; }
+  .admin.loading .view, .admin.loading .ad-disconnect { display: none !important; }
+
+  .ad-item {
+    display: flex; align-items: flex-start; gap: 8px; padding: 8px; margin-bottom: 6px;
+    border-radius: 10px; border: 1px solid var(--figma-color-border); background: var(--figma-color-bg);
+  }
+  .ad-item .num {
+    flex: none; width: 18px; padding-top: 6px; text-align: right; font-size: 11px; font-weight: 600;
+    color: var(--figma-color-text-tertiary); font-variant-numeric: tabular-nums;
+  }
+  .ad-item .fields { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  .ad-item .fld { display: flex; align-items: center; gap: 6px; }
+  .ad-item .fld b { flex: none; width: 18px; font-size: 9px; font-weight: 700; letter-spacing: .04em; color: var(--figma-color-text-tertiary); }
+  .ad-item .fld .input { padding: 5px 7px; }
+  .ad-item .acts { flex: none; display: flex; flex-direction: column; gap: 2px; }
+  .ad-item .acts .icon-btn { width: 22px; height: 22px; }
+  .ad-item .acts .icon-btn svg { width: 12px; height: 12px; }
+  .ad-item .acts .icon-btn:disabled { opacity: .25; cursor: default; background: none; }
+  .ad-item .tag {
+    align-self: flex-start; display: inline-block; margin-left: 24px; font-size: 9px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+    padding: 1px 6px; border-radius: 999px; background: var(--green-soft); color: var(--ok);
+  }
+  .ad-item.new { border-color: rgba(22, 163, 74, .4); }
+  .ad-item.invalid { border-color: var(--danger); }
+  .ad-item.deleted { background: var(--figma-color-bg-secondary); }
+  .ad-item.deleted .fields { opacity: .5; text-decoration: line-through; }
+  .ad-item.deleted .input { background: transparent; }
+  .ad-item .restore { margin-top: 2px; }
+
+  .ad-addrow { display: flex; gap: 6px; }
+  .ad-addrow .input { flex: 1; }
+  .ad-names { margin-top: 10px; border-radius: 10px; border: 1px solid var(--figma-color-border); overflow: hidden; }
+  .ad-name {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 6px 5px 10px;
+    border-top: 1px solid var(--figma-color-border);
+  }
+  .ad-name:first-child { border-top: 0; }
+  .ad-name span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ad-name.new span { color: var(--ok); font-weight: 600; }
+  .ad-disconnect {
+    display: block; margin-top: 24px; padding: 0; border: 0; background: none; cursor: pointer;
+    font-size: 11px; color: var(--figma-color-text-tertiary);
+  }
+  .ad-disconnect:hover { color: var(--danger); text-decoration: underline; }
+  #ad-confirm ul { margin: 8px 0 0; padding-left: 16px; color: var(--figma-color-text-secondary); }
+  #ad-confirm ul li { margin-bottom: 4px; }
+  #ad-confirm .box { max-width: 300px; }
 
   /* ---------- Version check: blocks every tool until it passes ---------- */
   .gate, .update {
@@ -878,6 +957,79 @@
         <div class="s-ver" id="sVer"></div>
         <div class="s-ver" id="sChecklist"></div>
       </div>
+      <button class="admin-link" id="openAdmin">Admin</button>
+    </div>
+  </div>
+
+  <!-- ==================== Admin ==================== -->
+  <div class="admin own-i18n" data-tab="checklist">
+    <div class="s-head">
+      <button class="icon-btn back" id="closeAdmin" data-i18n-title="back"></button>
+      <h2>Admin</h2>
+    </div>
+
+    <div id="ad-connect">
+      <p data-i18n="connectText"></p>
+      <ol>
+        <li data-i18n="step1"></li>
+        <li data-i18n="step2"></li>
+        <li data-i18n="step3"></li>
+        <li data-i18n="step4"></li>
+      </ol>
+      <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener" data-i18n="createLink"></a>
+      <div>
+        <div class="lbl" data-i18n="tokenLbl"></div>
+        <input class="input" id="ad-token" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…">
+        <div class="hint" data-i18n="tokenHint"></div>
+      </div>
+      <div class="banner err" id="ad-connectErr"></div>
+      <button class="btn primary" id="ad-connectBtn" data-i18n="connect"></button>
+    </div>
+
+    <div id="ad-main">
+      <nav class="tabs ad-tabs">
+        <button data-tab="checklist"><span data-i18n="tabChecklist"></span><i class="dot"></i></button>
+        <button data-tab="team"><span data-i18n="tabTeam"></span><i class="dot"></i></button>
+      </nav>
+      <div class="scroll">
+        <div class="banner" id="ad-msg"><b id="ad-msgTitle"></b><span id="ad-msgText"></span></div>
+        <div class="ad-loading" data-i18n="loading"></div>
+
+        <section class="view" id="ad-checklist">
+          <div id="ad-items"></div>
+          <button class="add" id="ad-addItem" data-i18n="addItem"></button>
+          <div class="hint" data-i18n="checklistHint"></div>
+        </section>
+
+        <section class="view" id="ad-team">
+          <div class="ad-addrow">
+            <input class="input" id="ad-name" data-i18n-placeholder="namePh">
+            <button class="btn" id="ad-addName" data-i18n="add"></button>
+          </div>
+          <div class="hint" id="ad-teamCount"></div>
+          <div class="ad-names" id="ad-names"></div>
+        </section>
+
+        <button class="ad-disconnect" id="ad-disconnect" data-i18n="disconnect"></button>
+      </div>
+      <footer class="f-foot">
+        <div class="info"><div id="ad-status"></div></div>
+        <div class="foot-actions">
+          <button class="btn" id="ad-discard" data-i18n="discard"></button>
+          <button class="btn primary" id="ad-save" data-i18n="publish"></button>
+        </div>
+      </footer>
+    </div>
+
+    <div class="confirm" id="ad-confirm">
+      <div class="box">
+        <h3 data-i18n="confirmTitle"></h3>
+        <ul id="ad-summary"></ul>
+        <div class="actions">
+          <button class="btn" id="ad-cancelPublish" data-i18n="cancel"></button>
+          <button class="btn primary" id="ad-confirmPublish" data-i18n="publish"></button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -911,7 +1063,7 @@
 
 <script>
 // Only this plugin as a whole has a version; the tools inside it don't.
-const VERSION = '1.1.0';
+const VERSION = '1.2.0';
 const REPO = 'tolgakutukcu/pydedesign-figma-masterplugin';
 const RAW = 'https://raw.githubusercontent.com/' + REPO + '/main/';
 const VERSION_URL = RAW + 'version.json';
@@ -985,7 +1137,7 @@ function ago(ts) {
 // Fills data-i18n / data-i18n-title / data-i18n-placeholder texts inside `root` from `strings`.
 // A tool's screen has its own strings; elements inside a tool are skipped for the shared strings.
 function translate(root, strings, skipTools) {
-  const own = (el) => !skipTools || !el.closest('.feature');
+  const own = (el) => !skipTools || !el.closest('.feature, .own-i18n');
   root.querySelectorAll('[data-i18n]').forEach((el) => { if (own(el)) el.textContent = strings[el.dataset.i18n]; });
   root.querySelectorAll('[data-i18n-title]').forEach((el) => { if (own(el)) el.title = strings[el.dataset.i18nTitle]; });
   root.querySelectorAll('[data-i18n-placeholder]').forEach((el) => { if (own(el)) el.placeholder = strings[el.dataset.i18nPlaceholder]; });
@@ -1071,6 +1223,7 @@ const Checklist = (() => {
   let lastState = { status: 'none' };
   let items = BUILT_IN;
   let fromGithub = false;
+  let pinnedUntil = 0; // after an admin save, the raw GitHub copy can be a few minutes old: keep the saved list
 
   function build() {
     $('list').innerHTML = '';
@@ -1150,6 +1303,7 @@ const Checklist = (() => {
   }
 
   async function loadItems() {
+    if (Date.now() < pinnedUntil) return;
     try {
       const res = await fetch(CHECKLIST_URL + '?t=' + Date.now(), { cache: 'no-store' });
       if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -1171,6 +1325,17 @@ const Checklist = (() => {
     if (m.type === 'state') render(m);
   }
 
+  // Called by the admin screen right after it published a new checklist.json.
+  function setItems(list) {
+    const next = parseItems(list);
+    if (!next) return;
+    items = next;
+    fromGithub = true;
+    pinnedUntil = Date.now() + 10 * 60 * 1000;
+    build();
+    applyLang();
+  }
+
   $('reset').onclick = () => { if (targetId) send({ f: 'checklist', type: 'reset', id: targetId }); };
   build();
   loadItems();
@@ -1179,7 +1344,7 @@ const Checklist = (() => {
   // Light sync so changes made by other designers show up.
   setInterval(() => { if (screen === 'checklist') send({ f: 'checklist', type: 'refresh' }); }, 3000);
 
-  return { applyLang, onMessage };
+  return { applyLang, onMessage, setItems };
 })();
 
 // =====================================================================================
@@ -1668,7 +1833,13 @@ const ReadMe = (() => {
   // Light sync so changes made by other designers show up.
   setInterval(() => { if (screen === 'readme' && !dirty && !saving) send({ f: 'readme', type: 'refresh' }); }, 3000);
 
-  return { applyLang, onMessage, save, onLeave: hideSuggest };
+  // Called by the admin screen right after it published a new team.json.
+  function setTeam(names) {
+    team = names.slice();
+    renderPeople();
+  }
+
+  return { applyLang, onMessage, save, onLeave: hideSuggest, setTeam };
 })();
 
 // =====================================================================================
@@ -2481,6 +2652,560 @@ const Images = (() => {
 })();
 
 // =====================================================================================
+// Admin: edits checklist.json and team.json in the GitHub repo, without touching JSON by hand.
+// Saving commits straight to `main` through the GitHub API, with the admin's own token
+// (fine-grained, this repo only, Contents: read and write). The token is kept by code.js in
+// this computer's plugin storage only.
+// =====================================================================================
+
+const Admin = (() => {
+  const root = document.querySelector('.admin');
+  const $ = (id) => document.getElementById('ad-' + id);
+  const API = 'https://api.github.com/repos/' + REPO;
+  const FILES = { checklist: 'checklist.json', team: 'team.json' };
+
+  const S = {
+    en: {
+      back: 'Back',
+      connectText: 'Admin edits the checklist items and the team name list, and publishes them to the GitHub repo. It needs a GitHub token that can write to the repo. The token is stored only on this computer.',
+      step1: 'Open GitHub → Settings → Developer settings → Fine-grained tokens → Generate new token.',
+      step2: 'Repository access: Only select repositories → ' + REPO.split('/')[1] + '.',
+      step3: 'Permissions → Repository permissions → Contents: Read and write.',
+      step4: 'Generate the token, copy it and paste it below.',
+      createLink: 'Open the token page on GitHub ↗',
+      tokenLbl: 'GitHub token', tokenHint: 'Kept in this plugin’s storage on this computer; never written to Figma files or the repo.',
+      connect: 'Connect', connecting: 'Checking…',
+      badToken: 'This token doesn’t work (wrong or expired).',
+      noRepo: 'This token can’t see the repo. Check the repository access of the token.',
+      netErr: 'Couldn’t reach GitHub. Check your connection and try again.',
+      tabChecklist: 'Checklist', tabTeam: 'Team list',
+      loading: 'Loading from GitHub…',
+      addItem: '+ Add item',
+      checklistHint: 'Changes go to everyone after you publish (it can take a few minutes). Reordering is fine. Removing an item hides its checks; restoring it brings them back.',
+      newTag: 'New', up: 'Move up', down: 'Move down', del: 'Remove', restore: 'Restore',
+      trPh: 'Turkish text', enPh: 'English text (optional)',
+      namePh: 'Name Surname', add: 'Add',
+      teamCount: (n) => n + (n === 1 ? ' person' : ' people') + ' · suggested in the owner fields of Design ReadMe. The repo is public: names only.',
+      dupName: 'That name is already in the list.',
+      removeName: 'Remove',
+      disconnect: 'Disconnect (delete the token from this computer)',
+      discard: 'Discard', publish: 'Publish', publishing: 'Publishing…',
+      upToDate: 'Same as on GitHub', unsaved: 'Unpublished changes',
+      emptyItem: 'An item can’t be empty. Fill in a text or remove it.',
+      confirmTitle: 'Publish the checklist?',
+      sumAdded: (n) => n + (n === 1 ? ' item' : ' items') + ' added. Frames that were complete will show as incomplete until these are checked.',
+      sumRemoved: (n) => n + (n === 1 ? ' item' : ' items') + ' removed. Their checks stay in the files but no longer count.',
+      sumEdited: (n) => n + (n === 1 ? ' item' : ' items') + ' reworded. Existing checks stay.',
+      sumOrder: 'Order changed.',
+      sumDelay: 'Others get it the next time they open the plugin (GitHub can take a few minutes).',
+      cancel: 'Cancel',
+      published: 'Published', publishedText: 'Others get it the next time they open the plugin (GitHub can take a few minutes).',
+      conflict: 'The file changed on GitHub in the meantime', conflictText: 'Nothing was published. Use Discard to load the latest version, then make your changes again.',
+      failed: 'Couldn’t publish', loadFailed: 'Couldn’t load from GitHub', retry: 'Use Discard to try again.'
+    },
+    tr: {
+      back: 'Geri',
+      connectText: 'Admin ekranında checklist maddelerini ve ekip isim listesini düzenleyip GitHub reposuna yayınlarsın. Bunun için repoya yazabilen bir GitHub token’ı gerekiyor. Token sadece bu bilgisayarda saklanır.',
+      step1: 'GitHub → Settings → Developer settings → Fine-grained tokens → Generate new token.',
+      step2: 'Repository access: Only select repositories → ' + REPO.split('/')[1] + '.',
+      step3: 'Permissions → Repository permissions → Contents: Read and write.',
+      step4: 'Token’ı oluştur, kopyala ve aşağıya yapıştır.',
+      createLink: 'GitHub’da token sayfasını aç ↗',
+      tokenLbl: 'GitHub token', tokenHint: 'Bu bilgisayarda plugin’in kendi deposunda tutulur; Figma dosyalarına ya da repoya asla yazılmaz.',
+      connect: 'Bağla', connecting: 'Kontrol ediliyor…',
+      badToken: 'Bu token çalışmıyor (hatalı ya da süresi dolmuş).',
+      noRepo: 'Bu token repoyu göremiyor. Token’ın repository access ayarını kontrol et.',
+      netErr: 'GitHub’a ulaşılamadı. Bağlantını kontrol edip tekrar dene.',
+      tabChecklist: 'Checklist', tabTeam: 'Ekip listesi',
+      loading: 'GitHub’dan yükleniyor…',
+      addItem: '+ Madde ekle',
+      checklistHint: 'Yayınladıktan sonra herkese geçer (birkaç dakika sürebilir). Sırayı değiştirmek sorun değil. Silinen maddenin işaretleri gizlenir; madde geri eklenirse işaretler de geri gelir.',
+      newTag: 'Yeni', up: 'Yukarı taşı', down: 'Aşağı taşı', del: 'Sil', restore: 'Geri al',
+      trPh: 'Türkçe metin', enPh: 'İngilizce metin (opsiyonel)',
+      namePh: 'Ad Soyad', add: 'Ekle',
+      teamCount: (n) => n + ' kişi · Tasarım Künyesi’ndeki sorumlu alanlarında önerilir. Repo herkese açık: sadece isim yaz.',
+      dupName: 'Bu isim listede zaten var.',
+      removeName: 'Çıkar',
+      disconnect: 'Bağlantıyı kes (token’ı bu bilgisayardan sil)',
+      discard: 'Değişiklikleri at', publish: 'Yayınla', publishing: 'Yayınlanıyor…',
+      upToDate: 'GitHub ile aynı', unsaved: 'Yayınlanmamış değişiklikler',
+      emptyItem: 'Boş madde olamaz. Bir metin yaz ya da maddeyi sil.',
+      confirmTitle: 'Checklist yayınlansın mı?',
+      sumAdded: (n) => n + ' madde eklenecek. Tamamlanmış frame’ler, bu maddeler işaretlenene kadar tamamlanmamış görünecek.',
+      sumRemoved: (n) => n + ' madde silinecek. İşaretleri dosyalarda kalır ama artık sayılmaz.',
+      sumEdited: (n) => n + ' maddenin metni değişecek. Mevcut işaretler korunur.',
+      sumOrder: 'Sıralama değişecek.',
+      sumDelay: 'Diğerlerine plugin’i bir sonraki açışlarında geçer (GitHub birkaç dakika gecikebilir).',
+      cancel: 'Vazgeç',
+      published: 'Yayınlandı', publishedText: 'Diğerlerine plugin’i bir sonraki açışlarında geçer (GitHub birkaç dakika gecikebilir).',
+      conflict: 'Dosya bu arada GitHub’da değişmiş', conflictText: 'Hiçbir şey yayınlanmadı. “Değişiklikleri at” ile güncel hali yükleyip değişikliklerini tekrar yap.',
+      failed: 'Yayınlanamadı', loadFailed: 'GitHub’dan yüklenemedi', retry: 'Tekrar denemek için “Değişiklikleri at”a bas.'
+    }
+  };
+
+  const ICON = {
+    up: '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5L6 4.5l3 3"/></svg>',
+    down: '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5L6 7.5l3-3"/></svg>',
+    del: '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 3.5h7M5 3.5V2.5h2v1M3.5 3.5l.5 6h4l.5-6"/></svg>'
+  };
+
+  const t = () => S[lang];
+  let token;            // undefined until code.js answers, then a string or null
+  let tab = 'checklist';
+  let busy = null;      // 'connect' | 'load' | 'publish'
+  let msg = null;       // { kind: 'ok' | 'err', title, text } banner
+  let loaded = false;
+
+  // Checklist rows: { id, tr, en, legacy, orig: { tr, en } | null (new), deleted, key }
+  const cl = { sha: null, rows: [], base: '', baseIds: [] };
+  // Team: { sha, names, base, added: Set }
+  const tm = { sha: null, names: [], base: '', added: new Set() };
+  let keySeq = 0;
+
+  // ---------- GitHub ----------
+
+  function fromB64(b64) {
+    const bin = atob(String(b64).replace(/\s/g, ''));
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  }
+  function toB64(str) {
+    let bin = '';
+    new TextEncoder().encode(str).forEach((b) => { bin += String.fromCharCode(b); });
+    return btoa(bin);
+  }
+
+  function api(path, opts) {
+    return fetch(API + path, Object.assign({
+      cache: 'no-store',
+      headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' }
+    }, opts || {}));
+  }
+
+  async function readFile(name) {
+    const res = await api('/contents/' + FILES[name] + '?ref=main');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const j = await res.json();
+    return { sha: j.sha, data: JSON.parse(fromB64(j.content)) };
+  }
+
+  // Returns 'ok' | 'conflict' | an error text.
+  async function writeFile(name, text, message) {
+    const sha = name === 'checklist' ? cl.sha : tm.sha;
+    const res = await api('/contents/' + FILES[name], {
+      method: 'PUT',
+      body: JSON.stringify({ message, content: toB64(text), sha, branch: 'main' })
+    });
+    if (res.status === 409) return 'conflict';
+    if (!res.ok) {
+      let detail = '';
+      try { detail = (await res.json()).message || ''; } catch (e) {}
+      return 'HTTP ' + res.status + (detail ? ': ' + detail : '');
+    }
+    const j = await res.json();
+    if (name === 'checklist') cl.sha = j.content.sha; else tm.sha = j.content.sha;
+    return 'ok';
+  }
+
+  // ---------- Checklist model ----------
+
+  function slug(s) {
+    return s.toLocaleLowerCase('tr').replace(/ı/g, 'i').normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'item';
+  }
+  // New ids get a short random tail, so a new item never takes over the checks of an old, removed item.
+  function newId(text, used) {
+    let id;
+    do { id = slug(text) + '-' + Math.random().toString(36).slice(2, 6); } while (used.has(id));
+    used.add(id);
+    return id;
+  }
+
+  function setChecklist(data, sha) {
+    cl.sha = sha;
+    cl.rows = (Array.isArray(data) ? data : []).filter((i) => i && typeof i.id === 'string').map((i) => ({
+      id: i.id, tr: i.tr || '', en: i.en || '', legacy: i.legacy,
+      orig: { tr: i.tr || '', en: i.en || '' }, deleted: false, key: ++keySeq
+    }));
+    cl.base = serializeChecklist(checklistItems(false).items);
+    cl.baseIds = cl.rows.map((r) => r.id);
+  }
+
+  // The list as it will be written. `final` assigns real ids to new items.
+  function checklistItems(final) {
+    const used = new Set(cl.rows.map((r) => r.id).filter(Boolean));
+    const items = [];
+    const invalid = [];
+    for (const r of cl.rows) {
+      if (r.deleted) continue;
+      const tr = r.tr.trim(), en = r.en.trim();
+      if (!tr && !en) {
+        if (r.id) invalid.push(r); // a new, still empty item is simply left out
+        continue;
+      }
+      const o = { id: r.id || (final ? newId(en || tr, used) : 'new-' + r.key), en: en || tr, tr: tr || en };
+      if (r.legacy) o.legacy = r.legacy;
+      items.push(o);
+    }
+    return { items, invalid };
+  }
+  // Same layout as the file in the repo: one item per line.
+  function serializeChecklist(items) {
+    return '[\n' + items.map((o) => '  ' + JSON.stringify(o)).join(',\n') + '\n]\n';
+  }
+  function checklistDirty() {
+    return loaded && serializeChecklist(checklistItems(false).items) !== cl.base;
+  }
+
+  // ---------- Team model ----------
+
+  const sortNames = (a) => a.slice().sort((x, y) => x.localeCompare(y, 'tr'));
+  function setTeam(data, sha) {
+    tm.sha = sha;
+    const raw = Array.isArray(data) ? data : [].concat(data.design || [], data.development || data.dev || [], data.product || []);
+    tm.names = sortNames(raw.filter((n) => typeof n === 'string' && n.trim()).map((n) => n.trim())
+      .filter((n, i, a) => a.indexOf(n) === i));
+    tm.added = new Set();
+    tm.base = serializeTeam(tm.names);
+  }
+  function serializeTeam(names) {
+    return JSON.stringify(names, null, 2) + '\n';
+  }
+  function teamDirty() {
+    return loaded && serializeTeam(tm.names) !== tm.base;
+  }
+
+  // ---------- Rendering ----------
+
+  function iconBtn(icon, title, onclick, disabled) {
+    const b = document.createElement('button');
+    b.className = 'icon-btn';
+    b.innerHTML = ICON[icon];
+    b.title = title;
+    b.disabled = !!disabled;
+    b.onclick = onclick;
+    return b;
+  }
+
+  function renderItems(focusKey) {
+    const list = $('items');
+    list.innerHTML = '';
+    let n = 0;
+    cl.rows.forEach((r, i) => {
+      const row = document.createElement('div');
+      row.className = 'ad-item' + (r.orig ? '' : ' new') + (r.deleted ? ' deleted' : '') + (r.invalid ? ' invalid' : '');
+
+      const num = document.createElement('div');
+      num.className = 'num';
+      num.textContent = r.deleted ? '–' : ++n;
+
+      const fields = document.createElement('div');
+      fields.className = 'fields';
+      [['tr', 'TR', t().trPh], ['en', 'EN', t().enPh]].forEach(([k, label, ph]) => {
+        const f = document.createElement('label');
+        f.className = 'fld';
+        const b = document.createElement('b');
+        b.textContent = label;
+        const input = document.createElement('input');
+        input.className = 'input';
+        input.value = r[k];
+        input.placeholder = ph;
+        input.disabled = r.deleted;
+        input.oninput = () => {
+          r[k] = input.value;
+          if (r.invalid && (r.tr.trim() || r.en.trim())) { r.invalid = false; row.classList.remove('invalid'); }
+          renderState();
+        };
+        input.onkeydown = (e) => { if (e.key === 'Enter' && k === 'en' && i === cl.rows.length - 1) addItem(); };
+        f.append(b, input);
+        fields.append(f);
+        if (k === 'tr' && r.key === focusKey) setTimeout(() => input.focus());
+      });
+      if (!r.orig) {
+        const tag = document.createElement('span');
+        tag.className = 'tag';
+        tag.textContent = t().newTag;
+        fields.append(tag);
+      }
+
+      const acts = document.createElement('div');
+      acts.className = 'acts';
+      if (r.deleted) {
+        const b = document.createElement('button');
+        b.className = 'btn small restore';
+        b.textContent = t().restore;
+        b.onclick = () => { r.deleted = false; renderItems(); renderState(); };
+        acts.append(b);
+      } else {
+        acts.append(
+          iconBtn('up', t().up, () => move(i, -1), i === 0),
+          iconBtn('down', t().down, () => move(i, 1), i === cl.rows.length - 1),
+          iconBtn('del', t().del, () => {
+            // A new item just goes away; an existing one stays, crossed out, until publishing.
+            if (r.orig) r.deleted = true; else cl.rows.splice(i, 1);
+            r.invalid = false;
+            renderItems();
+            renderState();
+          })
+        );
+      }
+      row.append(num, fields, acts);
+      list.append(row);
+    });
+  }
+
+  function move(i, d) {
+    const j = i + d;
+    if (j < 0 || j >= cl.rows.length) return;
+    const tmp = cl.rows[i]; cl.rows[i] = cl.rows[j]; cl.rows[j] = tmp;
+    renderItems();
+    renderState();
+  }
+
+  function addItem() {
+    const r = { id: null, tr: '', en: '', legacy: undefined, orig: null, deleted: false, key: ++keySeq };
+    cl.rows.push(r);
+    renderItems(r.key);
+    renderState();
+    const scroll = root.querySelector('#ad-main .scroll');
+    setTimeout(() => { scroll.scrollTop = scroll.scrollHeight; });
+  }
+
+  function renderNames() {
+    $('teamCount').textContent = t().teamCount(tm.names.length);
+    const list = $('names');
+    list.innerHTML = '';
+    tm.names.forEach((name) => {
+      const row = document.createElement('div');
+      row.className = 'ad-name' + (tm.added.has(name) ? ' new' : '');
+      const span = document.createElement('span');
+      span.textContent = name;
+      const x = document.createElement('button');
+      x.className = 'icon-btn danger';
+      x.innerHTML = X;
+      x.title = t().removeName;
+      x.onclick = () => { tm.names = tm.names.filter((n) => n !== name); tm.added.delete(name); renderNames(); renderState(); };
+      row.append(span, x);
+      list.append(row);
+    });
+    list.style.display = tm.names.length ? '' : 'none';
+  }
+
+  function addName() {
+    const input = $('name');
+    const name = input.value.trim().replace(/\s+/g, ' ');
+    if (!name) return;
+    if (tm.names.some((n) => n.toLocaleLowerCase('tr') === name.toLocaleLowerCase('tr'))) {
+      msg = { kind: 'err', title: t().dupName, text: '' };
+      return renderState();
+    }
+    tm.names = sortNames(tm.names.concat(name));
+    tm.added.add(name);
+    input.value = '';
+    msg = null;
+    renderNames();
+    renderState();
+    input.focus();
+  }
+
+  // Footer, tabs, banner and buttons.
+  function renderState() {
+    // While the saved token is still being read (undefined), show the loading state, not the connect form.
+    root.classList.toggle('connected', token !== null);
+    root.classList.toggle('loading', busy === 'load' || (token !== null && !loaded && !msg));
+    root.dataset.tab = tab;
+    const dirty = { checklist: checklistDirty(), team: teamDirty() };
+    root.querySelectorAll('.ad-tabs button').forEach((b) => {
+      b.classList.toggle('on', b.dataset.tab === tab);
+      b.classList.toggle('dirty', dirty[b.dataset.tab]);
+    });
+
+    const banner = $('msg');
+    banner.className = 'banner' + (msg ? ' show ' + msg.kind : '');
+    $('msgTitle').textContent = msg ? msg.title : '';
+    $('msgText').textContent = msg ? msg.text : '';
+
+    $('status').textContent = !loaded ? '' : dirty[tab] ? t().unsaved : t().upToDate;
+    $('save').textContent = busy === 'publish' ? t().publishing : t().publish;
+    $('save').disabled = !!busy || !loaded || !dirty[tab];
+    $('discard').disabled = !!busy;
+
+    $('connectBtn').textContent = busy === 'connect' ? t().connecting : t().connect;
+    $('connectBtn').disabled = busy === 'connect';
+  }
+
+  function renderAll() {
+    renderItems();
+    renderNames();
+    renderState();
+  }
+
+  // ---------- Flow ----------
+
+  async function load() {
+    busy = 'load';
+    msg = null;
+    renderState();
+    try {
+      const [c, m] = await Promise.all([readFile('checklist'), readFile('team')]);
+      setChecklist(c.data, c.sha);
+      setTeam(m.data, m.sha);
+      loaded = true;
+    } catch (e) {
+      loaded = false;
+      msg = { kind: 'err', title: t().loadFailed, text: String(e && e.message ? e.message : e) + '. ' + t().retry };
+    }
+    busy = null;
+    renderAll();
+  }
+
+  async function connect() {
+    const value = $('token').value.trim();
+    if (!value) return;
+    busy = 'connect';
+    $('connectErr').classList.remove('show');
+    renderState();
+    let error = null;
+    try {
+      const res = await fetch(API, { cache: 'no-store', headers: { Authorization: 'Bearer ' + value, Accept: 'application/vnd.github+json' } });
+      if (res.status === 401) error = t().badToken;
+      else if (!res.ok) error = t().noRepo;
+    } catch (e) {
+      error = t().netErr;
+    }
+    busy = null;
+    if (error) {
+      $('connectErr').textContent = error;
+      $('connectErr').classList.add('show');
+      return renderState();
+    }
+    token = value;
+    $('token').value = '';
+    send({ type: 'setAdmin', token: value });
+    load();
+  }
+
+  function disconnect() {
+    token = null;
+    loaded = false;
+    msg = null;
+    send({ type: 'setAdmin', token: null });
+    renderState();
+  }
+
+  function summary() {
+    const added = cl.rows.filter((r) => !r.orig && !r.deleted && (r.tr.trim() || r.en.trim())).length;
+    const removed = cl.rows.filter((r) => r.orig && r.deleted).length;
+    const edited = cl.rows.filter((r) => r.orig && !r.deleted && (r.tr.trim() !== r.orig.tr || r.en.trim() !== r.orig.en)).length;
+    const order = (rows) => rows.filter((r) => r.orig && !r.deleted).map((r) => r.id).join('|');
+    const before = cl.baseIds.filter((id) => cl.rows.some((r) => r.id === id && !r.deleted)).join('|');
+    const lines = [];
+    if (added) lines.push(t().sumAdded(added));
+    if (removed) lines.push(t().sumRemoved(removed));
+    if (edited) lines.push(t().sumEdited(edited));
+    if (order(cl.rows) !== before) lines.push(t().sumOrder);
+    lines.push(t().sumDelay);
+    return lines;
+  }
+
+  function startPublish() {
+    if (tab === 'team') return publish();
+    const { invalid } = checklistItems(false);
+    if (invalid.length) {
+      invalid.forEach((r) => { r.invalid = true; });
+      msg = { kind: 'err', title: t().emptyItem, text: '' };
+      renderItems();
+      return renderState();
+    }
+    const ul = $('summary');
+    ul.innerHTML = '';
+    summary().forEach((line) => {
+      const li = document.createElement('li');
+      li.textContent = line;
+      ul.append(li);
+    });
+    $('confirm').classList.add('show');
+  }
+
+  async function publish() {
+    $('confirm').classList.remove('show');
+    const name = tab;
+    busy = 'publish';
+    msg = null;
+    renderState();
+    let result, text, items = null;
+    try {
+      if (name === 'checklist') {
+        items = checklistItems(true).items;
+        text = serializeChecklist(items);
+        result = await writeFile('checklist', text, 'Update checklist items (Pyde Design admin)');
+      } else {
+        text = serializeTeam(tm.names);
+        result = await writeFile('team', text, 'Update team list (Pyde Design admin)');
+      }
+    } catch (e) {
+      result = t().netErr;
+    }
+    busy = null;
+    if (result === 'ok') {
+      msg = { kind: 'ok', title: t().published, text: t().publishedText };
+      if (name === 'checklist') {
+        setChecklist(items, cl.sha);
+        Checklist.setItems(items);
+      } else {
+        setTeam(JSON.parse(text), tm.sha);
+        ReadMe.setTeam(tm.names);
+      }
+    } else if (result === 'conflict') {
+      msg = { kind: 'err', title: t().conflict, text: t().conflictText };
+    } else {
+      msg = { kind: 'err', title: t().failed, text: result };
+    }
+    renderAll();
+  }
+
+  // ---------- Public ----------
+
+  function open() {
+    document.body.classList.add('admin-open');
+    if (token === undefined) send({ type: 'getAdmin' });
+    else if (token && !loaded && !busy) load();
+    renderState();
+  }
+  function close() {
+    document.body.classList.remove('admin-open');
+  }
+  function onToken(value) {
+    token = value || null;
+    if (token && !loaded && !busy) load();
+    renderState();
+  }
+  function applyLang() {
+    translate(root, t());
+    renderAll();
+  }
+
+  // ---------- Events ----------
+
+  root.querySelectorAll('.ad-tabs button').forEach((b) => {
+    b.onclick = () => { tab = b.dataset.tab; msg = null; renderState(); };
+  });
+  $('connectBtn').onclick = connect;
+  $('token').onkeydown = (e) => { if (e.key === 'Enter') connect(); };
+  $('addItem').onclick = addItem;
+  $('addName').onclick = addName;
+  $('name').onkeydown = (e) => { if (e.key === 'Enter') addName(); };
+  $('save').onclick = startPublish;
+  $('discard').onclick = load; // reloads both files from GitHub
+  $('cancelPublish').onclick = () => $('confirm').classList.remove('show');
+  $('confirmPublish').onclick = publish;
+  $('disconnect').onclick = disconnect;
+
+  return { open, close, onToken, applyLang };
+})();
+
+// =====================================================================================
 // Shell: navigation, language, version check
 // =====================================================================================
 
@@ -2493,7 +3218,7 @@ function go(f) {
   if (screen === 'readme' && next !== 'readme') ReadMe.onLeave();
   screen = next;
   document.body.dataset.screen = next;
-  document.body.classList.remove('settings-open');
+  document.body.classList.remove('settings-open', 'admin-open');
   send({ type: 'nav', f: next === 'home' ? null : next });
 }
 
@@ -2504,6 +3229,7 @@ function applyLang() {
   $('sVer').textContent = g().version + ' ' + VERSION + (remoteVersion ? '  ·  GitHub: v' + remoteVersion : '');
   if (latestVersion) $('versions').textContent = g().installed + ': v' + VERSION + '  ·  ' + g().latest + ': v' + latestVersion;
   Object.keys(MODULES).forEach((k) => MODULES[k].applyLang());
+  Admin.applyLang();
 }
 
 // Returns true if version a is older than b (e.g. '1.0.0' < '1.1.0').
@@ -2560,6 +3286,8 @@ document.querySelectorAll('[data-go]').forEach((b) => { b.onclick = () => go(b.d
 $('goHome').onclick = () => go(null);
 $('openSettings').onclick = () => document.body.classList.add('settings-open');
 $('closeSettings').onclick = () => document.body.classList.remove('settings-open');
+$('openAdmin').onclick = () => Admin.open();
+$('closeAdmin').onclick = () => Admin.close();
 document.querySelectorAll('[data-lang]').forEach((b) => {
   b.onclick = () => { lang = b.dataset.lang; send({ type: 'setLang', lang }); applyLang(); };
 });
@@ -2577,6 +3305,8 @@ onmessage = (e) => {
     applyLang();
     go(m.route); // opened from a tool's menu item or relaunch button: straight to that tool
     document.body.classList.remove('loading');
+  } else if (m.type === 'admin' && !m.f) {
+    Admin.onToken(m.token);
   } else if (MODULES[m.f]) {
     MODULES[m.f].onMessage(m);
   }

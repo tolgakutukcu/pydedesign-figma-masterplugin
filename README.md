@@ -36,6 +36,17 @@ Only Pyde Design as a whole has a version; the tools inside it don't. On start t
 
 `version.json`, `team.json` and `checklist.json` must stay in the repo root on `main` and the repo must be public, because the plugin reads them from `raw.githubusercontent.com`.
 
+## Admin
+
+Settings → **Admin** (the small link at the bottom) edits the checklist items and the team name list and publishes them to this repo, without editing JSON by hand:
+
+- **Checklist**: edit the Turkish / English text of each item, reorder, remove (crossed out with **Restore** until you publish) and **+ Add item**. Ids are created automatically and existing ids never change. **Publish** first shows what will happen (items added / removed / reworded) and asks to confirm.
+- **Team list**: type a name and press Enter to add it, ✕ to remove one.
+
+Publishing commits straight to `main` (one commit per publish, so GitHub history shows every change). Others get it the next time they open the plugin; GitHub's raw files can take a few minutes to update. If the file changed on GitHub in the meantime, nothing is published: **Discard** loads the latest version.
+
+It needs a GitHub **fine-grained personal access token** with access to this repository only and *Contents: Read and write*. The Admin screen explains how to create it. The token is kept only in this plugin's storage on the admin's computer, never in Figma files or the repo. **Disconnect** deletes it.
+
 ## Handoff Pre Checklist
 
 Select a section, a root frame, or a frame placed directly inside a section. The state is saved in the file itself, so every designer sees the same status.

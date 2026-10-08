@@ -16,6 +16,7 @@ figma.showUI(__html__, { width: 360, height: 600, themeColors: true });
 
 const TOOLS = ['checklist', 'readme', 'note', 'images'];
 const LANG_KEY = 'pyde-lang';
+const ADMIN_KEY = 'pyde-admin-token';
 let lang = 'en';
 let active = null; // the tool on screen, null on the home screen
 const startRoute = TOOLS.indexOf(figma.command) !== -1 ? figma.command : null;
@@ -1632,6 +1633,17 @@ figma.ui.onmessage = async (msg) => {
         lang = msg.lang;
         await figma.clientStorage.setAsync(LANG_KEY, lang);
       }
+      return;
+    }
+    // The admin's GitHub token (used by the UI to edit checklist.json / team.json in the repo).
+    // It is kept only on this computer, in this plugin's local storage, never in the file.
+    if (msg.type === 'getAdmin') {
+      figma.ui.postMessage({ type: 'admin', token: (await figma.clientStorage.getAsync(ADMIN_KEY)) || null });
+      return;
+    }
+    if (msg.type === 'setAdmin') {
+      if (msg.token) await figma.clientStorage.setAsync(ADMIN_KEY, String(msg.token));
+      else await figma.clientStorage.deleteAsync(ADMIN_KEY);
       return;
     }
     // The UI switched screens: `f` is the tool now on screen, or null for the home screen.
