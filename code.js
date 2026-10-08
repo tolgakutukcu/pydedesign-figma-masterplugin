@@ -393,7 +393,10 @@ const ReadMe = (() => {
     put(card, text('Last updated by ' + data.by + ' · ' + fmtDate(data.at), 'regular', 11, 'tertiary', 'Last updated'), true);
   }
 
-  const CARD_INSET = 96; // the card sits this far from the section's left and top edges
+  // The card sits this far from the section's left and top edges: 100, like Figma's own "Resize to fit"
+  // for sections. Cards placed before v1.4.1 sit at 96 and still count as placed by the plugin.
+  const CARD_INSET = 100;
+  const LEGACY_INSET = 96;
   const CARD_GAP = 96;   // minimum space between the card and the content below it
 
   // Grows a section so the card fits inside it, with breathing room.
@@ -437,7 +440,7 @@ const ReadMe = (() => {
     renderCard(card, section, data);
     if (isNew) {
       placeNewCard(card, section);
-    } else if (card.x === CARD_INSET && card.y === CARD_INSET) {
+    } else if ((card.x === CARD_INSET && card.y === CARD_INSET) || (card.x === LEGACY_INSET && card.y === LEGACY_INSET)) {
       // The card got taller or shorter: move the content below it by the same amount,
       // so the space between them stays as it was. Skipped if someone moved the card
       // (or it was placed by an older version), since then it isn't above the content.
@@ -698,9 +701,10 @@ const ReadMe = (() => {
     figma.notify(t('Design ReadMe removed', 'Tasarım künyesi kaldırıldı'));
   }
 
-  // Sizes the section to its content with SECTION_FIT on every side. The content keeps its place on
+  // Sizes the section to its content with SECTION_FIT on every side (100, like Figma's own "Resize to fit"
+  // for sections). The content keeps its place on
   // the canvas: the section moves and resizes around it. Works on any section, with or without a ReadMe.
-  const SECTION_FIT = 96;
+  const SECTION_FIT = 100;
   async function fit(id) {
     const section = await getSection(id);
     if (!section) return;
@@ -715,7 +719,7 @@ const ReadMe = (() => {
     section.x -= dx;
     section.y -= dy;
     section.resizeWithoutConstraints(maxX - minX + 2 * SECTION_FIT, maxY - minY + 2 * SECTION_FIT);
-    figma.notify(t('Section fitted to its content', 'Section içeriğe sığdırıldı'));
+    figma.notify(t('Section resized to its content', 'Section içeriğine göre boyutlandırıldı'));
   }
 
   async function goTo(id) {
@@ -1652,7 +1656,7 @@ const Titles = (() => {
   const GAP = 48; // between the title and the frames, and between frames
   const FRAME_TYPES = ['FRAME', 'COMPONENT', 'COMPONENT_SET', 'INSTANCE'];
   const PREFS_KEY = 'pyde-title-prefs';
-  const SECTION_PAD = 96; // room kept above a title that would stick out of the top of its section
+  const SECTION_PAD = 100; // room kept around content that would stick out of its section (as Figma's "Resize to fit")
 
   // DM Sans comes with Figma (all Google Fonts do). Its style is called "SemiBold"; the other spelling
   // and Inter are only fallbacks.

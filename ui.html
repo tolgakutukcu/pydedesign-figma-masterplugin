@@ -455,7 +455,7 @@
   .check b { display: block; font-weight: 600; }
   .check small { display: block; margin-top: 2px; font-size: 11px; color: var(--figma-color-text-secondary); }
 
-  /* Design ReadMe: fit the section to its content */
+  /* Design ReadMe: resize the section to its content */
   #s-readme .fit-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
   #s-readme .fit-row .hint { margin: 0; }
   #s-readme .fit-row .btn { flex: none; }
@@ -1146,7 +1146,7 @@
 
 <script>
 // Only this plugin as a whole has a version; the tools inside it don't.
-const VERSION = '1.4.0';
+const VERSION = '1.4.1';
 const REPO = 'tolgakutukcu/pydedesign-figma-masterplugin';
 const RAW = 'https://raw.githubusercontent.com/' + REPO + '/main/';
 const VERSION_URL = RAW + 'version.json';
@@ -1468,7 +1468,7 @@ const ReadMe = (() => {
       ovHint: 'ReadMes on the current page are refreshed every time you open this tab. Other pages show their last known state.',
       scanAll: 'Scan all pages', scanning: 'Scanning…', all: 'All', current: 'current page',
       ovEmpty: 'No ReadMes in this file yet.', ovEmptyFilter: 'No ReadMes with this status.',
-      fit: 'Fit section', fitHint: 'Sizes the section to its content, 96 px on every side.'
+      fit: 'Resize section', fitHint: 'Sizes the section to its content, 100 px on every side.'
     },
     tr: {
       back: 'Geri', appTitle: 'Tasarım Künyesi',
@@ -1497,7 +1497,7 @@ const ReadMe = (() => {
       ovHint: 'Bulunduğun sayfadaki künyeler bu sekmeyi her açtığında yenilenir. Diğer sayfalar bilinen son durumu gösterir.',
       scanAll: 'Tüm sayfaları tara', scanning: 'Taranıyor…', all: 'Tümü', current: 'bu sayfa',
       ovEmpty: 'Bu dosyada henüz künye yok.', ovEmptyFilter: 'Bu durumda künye yok.',
-      fit: 'Section’ı sığdır', fitHint: 'Section’ı içeriğine göre boyutlar, her yönden 96 px.'
+      fit: 'Section’ı boyutlandır', fitHint: 'Section’ı içeriğine göre boyutlar, her yönden 100 px.'
     }
   };
 

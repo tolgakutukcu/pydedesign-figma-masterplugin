@@ -73,14 +73,14 @@ If `checklist.json` can't be loaded or isn't valid, the plugin uses the list bui
 
 1. Select a section and open Design ReadMe. A ReadMe can only be added to a section, not to a frame.
 2. Fill in the form and click **Add Design ReadMe**.
-   - The card is placed inside the section, in its top-left corner (96 px from the left and top). The existing content moves down to start 96 px below the card, and the section grows to fit. When the card later gets taller or shorter, the content below it moves with it.
+   - The card is placed inside the section, in its top-left corner (100 px from the left and top, like Figma's own *Resize to fit* for sections). The existing content moves down to start 96 px below the card, and the section grows to fit. When the card later gets taller or shorter, the content below it moves with it.
 3. To edit later, select the section or the card and click **Edit Design ReadMe** in the right panel.
 
 Don't edit the card's text by hand — it is redrawn from the form on every save. The card is a normal Figma frame made of plain text layers, so Figma MCP and Dev Mode read it like any other part of the section.
 
 The section name shows its status after an em dash, updated on every save: `Checkout Flow — 🚧 Work in progress`, `— 👀 In review`, `— ✅ Ready for development`. Removing the ReadMe removes the suffix.
 
-**Fit section** (under the selected section) sizes the section to its content with 96 px on every side. The content keeps its place on the canvas; the section moves and resizes around it. It works on any section, with or without a ReadMe.
+**Resize section** (under the selected section) sizes the section to its content with 100 px on every side, the same as Figma's own *Resize to fit* for sections. The content keeps its place on the canvas; the section moves and resizes around it. It works on any section, with or without a ReadMe.
 
 The **Overview** tab lists every ReadMe in the file. The current page is rescanned each time you open the tab; other pages show their last known state. **Scan all pages** refreshes everything.
 
