@@ -92,11 +92,11 @@ Any name can be typed into any owner field. Figma only lets plugins see the peop
 
 ## Frame Note
 
-1. Select a frame that sits in a section and open Frame Note. Selecting a layer inside a frame works too: the note belongs to the top-level frame in the section.
+1. Select a frame and open Frame Note. Selecting a layer inside a frame works too: the note belongs to the top-level frame (the one directly in a section or on the page). Frames that aren't in a section get a note too, but the plugin warns about it: developers (and Claude) usually read a whole section, so frames are best kept in one.
 2. Write the note. **+ Add note** adds another paragraph. Click **Add note** (or ⌘/Ctrl + Enter).
 3. To edit later, select the frame or its card and click **Edit Frame Note** in the right panel.
 
-The card appears right below the frame, exactly as wide as the frame, in the same section. Each paragraph shows who wrote it and when. Its layer name says which frame it belongs to: `📝 Note → Login (12:345)`.
+The card appears right below the frame, exactly as wide as the frame, in the same section (or on the page). Each paragraph shows who wrote it and when. Its layer name says which frame it belongs to: `📝 Note → Login (12:345)`.
 
 - Select several frames to add the same paragraph to all of them.
 - While the plugin is open (on any tool), a card follows its frame when the frame is moved, resized or renamed. Anything that drifted while the plugin was closed is fixed the next time it is opened on that page.
@@ -127,8 +127,8 @@ Treat the notes as requirements.
 
 ## Figma frame notes
 Designers leave notes on individual frames, in a layer named "📝 Note → <frame name> (<frame node id>)",
-placed right below the frame in the same section.
-- Whenever you are given a Figma frame, call get_metadata on the section it sits in and look for the
+placed right below the frame in the same section (or on the page, if the frame isn't in a section).
+- Whenever you are given a Figma frame, call get_metadata on the section (or page) it sits in and look for the
   "📝 Note → … (<node id>)" layer with that frame's node id (the id in a Figma URL uses "-" instead of ":",
   e.g. node-id=12-345 is 12:345). Read it with get_design_context.
 - Treat the notes as requirements for that frame. If a note contradicts the design, ask before implementing.

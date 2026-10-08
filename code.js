@@ -747,7 +747,8 @@ const ReadMe = (() => {
 //    layer name and text name the frame and its node id, so a reader knows which frame it belongs to.
 // The card is always written in English, whatever the plugin's interface language is.
 //
-// Notes can only be added to frames that sit directly in a section. While the plugin is open (on any
+// Notes are added to top-level frames: frames directly in a section or directly on the page. Frames that
+// aren't in a section get a note too; the UI only warns about it. While the plugin is open (on any
 // tool), cards follow their frame when it moves, resizes or is renamed; anything that drifted while it
 // was closed is fixed the next time it opens.
 // =====================================================================================
@@ -1145,8 +1146,7 @@ const Note = (() => {
   // ---------- State ----------
 
   // What a selected node points at:
-  //  { kind: 'frame', frame }   a frame directly in a section, or anything inside it, or its card
-  //  { kind: 'outside' }        a frame that isn't in a section
+  //  { kind: 'frame', frame }   a frame directly in a section or on the page, anything inside it, or its card
   //  { kind: 'orphan', card }   a card whose frame was deleted
   //  { kind: 'section' }        a section itself
   //  null                       anything else (including a Design ReadMe card)
@@ -1155,14 +1155,13 @@ const Note = (() => {
       if (isCard(n)) {
         const f = await targetOf(n);
         if (!f) return { kind: 'orphan', card: n };
-        return f.parent.type === 'SECTION' ? { kind: 'frame', frame: f } : { kind: 'outside' };
+        return canHost(f) ? { kind: 'frame', frame: f } : null;
       }
     }
     let top = node;
     while (top.parent && top.parent.type !== 'SECTION' && top.parent.type !== 'PAGE') top = top.parent;
     if (top.type === 'SECTION') return { kind: 'section' };
-    if (!isFrame(top)) return null;
-    return top.parent.type === 'SECTION' ? { kind: 'frame', frame: top } : { kind: 'outside' };
+    return isFrame(top) ? { kind: 'frame', frame: top } : null;
   }
 
   let stateSeq = 0;
@@ -1170,24 +1169,25 @@ const Note = (() => {
     const seq = ++stateSeq;
     const frames = [];
     const seen = new Set();
-    let outside = 0, orphan = null, section = false;
+    let orphan = null, section = false;
     for (const n of figma.currentPage.selection) {
       const r = await resolve(n);
       if (!r) continue;
       if (r.kind === 'frame') {
         if (!seen.has(r.frame.id)) { seen.add(r.frame.id); frames.push(r.frame); }
-      } else if (r.kind === 'outside') outside++;
-      else if (r.kind === 'orphan') orphan = r.card;
+      } else if (r.kind === 'orphan') orphan = r.card;
       else if (r.kind === 'section') section = true;
     }
     if (seq !== stateSeq) return; // a newer selection is already being handled
 
-    if (frames.length === 1 && !outside) {
+    // `section` is null for a frame that isn't in a section; the UI warns about it.
+    const sectionOf = (f) => (f.parent.type === 'SECTION' ? f.parent.name : null);
+    if (frames.length === 1) {
       const f = frames[0];
       const p = pageOf(f);
       return post('note', {
         type: 'state', status: 'ok',
-        target: { id: f.id, name: f.name, section: f.parent.name, page: p ? p.name : '' },
+        target: { id: f.id, name: f.name, section: sectionOf(f), page: p ? p.name : '' },
         note: readNote(f),
         overlaps: overlaps(findCard(f)),
         me: userName()
@@ -1195,32 +1195,32 @@ const Note = (() => {
     }
     if (frames.length) {
       return post('note', {
-        type: 'state', status: 'multiple', outside,
+        type: 'state', status: 'multiple',
         frames: frames.map((f) => {
           const d = readNote(f);
-          return { id: f.id, name: f.name, section: f.parent.name, count: d ? d.entries.length : 0 };
+          return { id: f.id, name: f.name, section: sectionOf(f), count: d ? d.entries.length : 0 };
         })
       });
     }
     post('note', {
       type: 'state',
-      status: outside ? 'outside' : orphan ? 'orphan' : section ? 'section' : 'none',
+      status: orphan ? 'orphan' : section ? 'section' : 'none',
       orphan: orphan ? { id: orphan.id, name: cardInfo(orphan).frameName || '?' } : null
     });
   }
 
   // ---------- Messages ----------
 
-  // `anywhere` skips the section check (removing a note from a frame that was moved out of its section).
+  // `anywhere` skips the placement check (removing a note from a frame that was moved into another layer).
   async function getFrame(id, anywhere) {
     const node = id ? await figma.getNodeByIdAsync(id) : null;
     if (!node || node.removed || !isFrame(node)) {
       figma.notify(t('The frame no longer exists.', 'Frame artık yok.'), { error: true });
       return null;
     }
-    if (!anywhere && (!node.parent || node.parent.type !== 'SECTION')) {
-      figma.notify(t('This frame isn’t in a section. Move it into a section first.',
-        'Bu frame bir section içinde değil. Önce bir section’a taşı.'), { error: true });
+    if (!anywhere && !canHost(node)) {
+      figma.notify(t('Notes can only be added to frames placed directly in a section or on the page.',
+        'Not sadece doğrudan bir section içinde ya da sayfada duran frame’lere eklenebilir.'), { error: true });
       return null;
     }
     return node;

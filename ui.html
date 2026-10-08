@@ -804,6 +804,11 @@
             </div>
           </div>
 
+          <div class="banner" id="nt-noSectionBanner">
+            <b data-i18n="outsideTitle"></b>
+            <span data-i18n="outsideText"></span>
+          </div>
+
           <div class="banner" id="nt-overlapBanner">
             <b data-i18n="overlapTitle"></b>
             <span id="nt-overlapText"></span>
@@ -1063,7 +1068,7 @@
 
 <script>
 // Only this plugin as a whole has a version; the tools inside it don't.
-const VERSION = '1.2.0';
+const VERSION = '1.3.0';
 const REPO = 'tolgakutukcu/pydedesign-figma-masterplugin';
 const RAW = 'https://raw.githubusercontent.com/' + REPO + '/main/';
 const VERSION_URL = RAW + 'version.json';
@@ -1214,7 +1219,7 @@ const Checklist = (() => {
 
   const ICONS = {
     Frame: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M5.5 2v12M10.5 2v12M2 5.5h12M2 10.5h12"/></svg>',
-    Section: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M2 5.5V4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1v1.5M2 5.5h12V12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V5.5z"/></svg>'
+    Section: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><rect x="2.5" y="2.5" width="11" height="11" rx="1.5"/><path d="M2.5 6.5h4.5v-4"/></svg>'
   };
   const CHECK = '<svg viewBox="0 0 16 16" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"/></svg>';
 
@@ -1414,7 +1419,7 @@ const ReadMe = (() => {
     }
   };
 
-  const ICON_SECTION = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M2 5.5V4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1v1.5M2 5.5h12V12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V5.5z"/></svg>';
+  const ICON_SECTION = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><rect x="2.5" y="2.5" width="11" height="11" rx="1.5"/><path d="M2.5 6.5h4.5v-4"/></svg>';
   const EMOJI = { wip: '🚧', review: '👀', ready: '✅' }; // same as the section name suffix
   const t = () => S[lang];
   let lastState = { status: 'none' };
@@ -1855,11 +1860,11 @@ const Note = (() => {
       back: 'Back', appTitle: 'Frame Note',
       tabNote: 'Note', tabOverview: 'Overview',
       emptyTitle: 'Select a frame',
-      emptyText: 'A note attaches to a frame inside a section. You can also select an existing note card.',
+      emptyText: 'A note attaches to a frame (best kept in a section). You can also select an existing note card.',
       sectionTitle: 'Select a frame',
       sectionText: 'Notes are added to frames, not sections. Select one or more frames inside this section.',
       outsideTitle: 'Frame isn’t in a section',
-      outsideText: 'Notes can only be added to frames that sit directly in a section. Move the frame into a section first.',
+      outsideText: 'The note works, but frames are best kept in a section: developers (and Claude) usually read a whole section, and the note is read together with it.',
       orphanTitle: 'This note’s frame was deleted',
       orphanText: (n) => 'The card was attached to “' + n + '”, which no longer exists.',
       deleteNote: 'Delete note card',
@@ -1872,7 +1877,7 @@ const Note = (() => {
       overlapTitle: 'The note overlaps other layers',
       overlapText: (names) => 'It covers “' + names[0] + '”' + (names.length > 1 ? ' and ' + (names.length - 1) + ' more' : '') + '. Make some room below the frame.',
       multiName: (n) => n + ' frames selected', multiSub: 'The note is added to each of them',
-      outsideMulti: (n) => n + (n === 1 ? ' selected frame isn’t' : ' selected frames aren’t') + ' in a section and will be skipped.',
+      outsideMulti: (n) => n + (n === 1 ? ' selected frame isn’t' : ' selected frames aren’t') + ' in a section. The note is added anyway, but frames are best kept in a section.',
       addAllLbl: 'Add a note to all', addAllHint: 'Added as a new paragraph; existing notes stay as they are.',
       addAll: (n) => 'Add to ' + n + ' frames',
       create: 'Add note', save: 'Save changes', remove: 'Remove',
@@ -1894,11 +1899,11 @@ const Note = (() => {
       back: 'Geri', appTitle: 'Frame Notu',
       tabNote: 'Not', tabOverview: 'Genel bakış',
       emptyTitle: 'Bir frame seç',
-      emptyText: 'Not, bir section içindeki frame’e eklenir. Mevcut bir not kartını da seçebilirsin.',
+      emptyText: 'Not bir frame’e eklenir (frame’in bir section içinde olması önerilir). Mevcut bir not kartını da seçebilirsin.',
       sectionTitle: 'Bir frame seç',
       sectionText: 'Notlar section’a değil frame’e eklenir. Bu section içinden bir veya birkaç frame seç.',
       outsideTitle: 'Frame bir section içinde değil',
-      outsideText: 'Not sadece doğrudan bir section içinde duran frame’lere eklenebilir. Önce frame’i bir section’a taşı.',
+      outsideText: 'Not çalışır ama frame’leri bir section içinde tutmak daha iyi: developer’lar (ve Claude) genelde tüm section’ı okur, not da onunla birlikte okunur.',
       orphanTitle: 'Bu notun frame’i silinmiş',
       orphanText: (n) => 'Kart “' + n + '” frame’ine aitti, o frame artık yok.',
       deleteNote: 'Not kartını sil',
@@ -1911,7 +1916,7 @@ const Note = (() => {
       overlapTitle: 'Not başka katmanlarla çakışıyor',
       overlapText: (names) => '“' + names[0] + '”' + (names.length > 1 ? ' ve ' + (names.length - 1) + ' katman daha' : '') + ' notun altında kalıyor. Frame’in altında yer aç.',
       multiName: (n) => n + ' frame seçili', multiSub: 'Not her birine eklenir',
-      outsideMulti: (n) => 'Seçili ' + n + ' frame bir section içinde değil, bunlar atlanacak.',
+      outsideMulti: (n) => 'Seçili ' + n + ' frame bir section içinde değil. Not yine de eklenir ama frame’leri bir section içinde tutmak daha iyi.',
       addAllLbl: 'Hepsine not ekle', addAllHint: 'Yeni bir paragraf olarak eklenir; mevcut notlar olduğu gibi kalır.',
       addAll: (n) => n + ' frame’e ekle',
       create: 'Not ekle', save: 'Değişiklikleri kaydet', remove: 'Kaldır',
@@ -2024,8 +2029,8 @@ const Note = (() => {
 
   function showPlaceholder(key, m) {
     const ph = $('placeholder');
-    ph.className = 'placeholder' + (key === 'outside' || key === 'orphan' ? ' warn' : '') + (key === 'orphan' ? ' orphan' : '');
-    $('phIco').innerHTML = key === 'outside' || key === 'orphan' ? ICONS.Warn : POINTER;
+    ph.className = 'placeholder' + (key === 'orphan' ? ' warn orphan' : '');
+    $('phIco').innerHTML = key === 'orphan' ? ICONS.Warn : POINTER;
     $('phTitle').textContent = t()[key + 'Title'];
     $('phText').textContent = key === 'orphan' ? t().orphanText(m.orphan.name) : t()[key + 'Text'];
   }
@@ -2062,7 +2067,7 @@ const Note = (() => {
     if (m.status !== 'ok') {
       editing = null;
       setMode('none');
-      showPlaceholder(m.status === 'outside' ? 'outside' : m.status === 'orphan' ? 'orphan' : m.status === 'section' ? 'section' : 'empty', m);
+      showPlaceholder(m.status === 'orphan' ? 'orphan' : m.status === 'section' ? 'section' : 'empty', m);
       return;
     }
 
@@ -2070,7 +2075,8 @@ const Note = (() => {
     me = m.me || me;
     $('targetIco').innerHTML = ICONS.Frame;
     $('targetName').textContent = m.target.name;
-    $('targetSub').textContent = 'Frame · ' + t().inSection(m.target.section);
+    $('targetSub').textContent = 'Frame · ' + (m.target.section ? t().inSection(m.target.section) : m.target.page);
+    $('noSectionBanner').classList.toggle('show', !m.target.section);
     $('badge').textContent = m.note ? t().count(m.note.entries.length) : t().noNote;
     $('overlapBanner').classList.toggle('show', !!(m.overlaps && m.overlaps.length));
     if (m.overlaps && m.overlaps.length) $('overlapText').textContent = t().overlapText(m.overlaps);
@@ -2091,8 +2097,9 @@ const Note = (() => {
   function renderMulti(m) {
     $('multiIco').innerHTML = ICONS.Frames;
     $('multiName').textContent = t().multiName(m.frames.length);
-    $('outsideBanner').classList.toggle('show', m.outside > 0);
-    $('outsideText').textContent = t().outsideMulti(m.outside);
+    const outside = m.frames.filter((f) => !f.section).length;
+    $('outsideBanner').classList.toggle('show', outside > 0);
+    $('outsideText').textContent = t().outsideMulti(outside);
     const list = $('frameList');
     list.innerHTML = '';
     m.frames.forEach((f) => {
