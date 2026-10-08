@@ -1,0 +1,26 @@
+{
+  "name": "Pyde Design",
+  "id": "1000000000000000100",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page",
+  "permissions": ["currentuser", "activeusers"],
+  "menu": [
+    { "name": "Pyde Design", "command": "home" },
+    { "separator": true },
+    { "name": "Handoff Pre Checklist", "command": "checklist" },
+    { "name": "Design ReadMe", "command": "readme" },
+    { "name": "Frame Note", "command": "note" },
+    { "name": "Image Optimizer", "command": "images" }
+  ],
+  "relaunchButtons": [
+    { "command": "readme", "name": "Edit Design ReadMe" },
+    { "command": "note", "name": "Edit Frame Note" }
+  ],
+  "networkAccess": {
+    "allowedDomains": ["https://raw.githubusercontent.com"],
+    "reasoning": "Checks the latest plugin version and loads the team name list from GitHub."
+  }
+}

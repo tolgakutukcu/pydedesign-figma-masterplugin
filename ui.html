@@ -1,0 +1,2540 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  /* The brand color is only used in the top bar and on primary action buttons.
+     Everything else follows Figma's neutral theme colors (light and dark). */
+  :root {
+    --brand: #4261EE;
+    --bar-h: 52px;
+    --focus: var(--figma-color-border-strong);
+    --raised: 0 0 0 1px var(--figma-color-border), 0 1px 2px rgba(0, 0, 0, .1);
+    --wip: #F59E0B;
+    --review: #7C5CFF;
+    --ready: #1BC47D;
+    --green: #1bc47d;
+    --green-soft: rgba(27, 196, 125, .14);
+    --ok: #16A34A;
+    --ok-bg: rgba(22, 163, 74, .12);
+    --warn: #B45309;
+    --warn-bg: rgba(245, 158, 11, .14);
+    --danger: #E5484D;
+    --sticky: #FFEFA6;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; overflow: hidden; }
+  body {
+    display: flex; flex-direction: column;
+    font: 12px/1.45 Inter, system-ui, sans-serif;
+    color: var(--figma-color-text); background: var(--figma-color-bg);
+    -webkit-font-smoothing: antialiased;
+  }
+  body.loading { visibility: hidden; } /* avoids a language flash before saved prefs arrive */
+  button, input, textarea { font: inherit; color: inherit; }
+
+  /* ---------- Top bar (brand color) ---------- */
+  .bar {
+    flex: none; height: var(--bar-h); display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 0 10px 0 12px; background: var(--brand); color: #fff;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 9px; min-width: 0; padding: 4px 8px 4px 4px; margin-left: -4px;
+    border: 0; border-radius: 8px; background: none; cursor: pointer; text-align: left;
+  }
+  .brand:hover { background: rgba(255, 255, 255, .12); }
+  .logo { flex: none; width: 30px; height: 30px; border-radius: 4px; }
+  .brand b { display: block; font-size: 13px; line-height: 1.2; letter-spacing: -.01em; }
+  .brand small { display: block; font-size: 10px; line-height: 1.2; opacity: .75; font-variant-numeric: tabular-nums; }
+  .bar .icon-btn { color: rgba(255, 255, 255, .85); }
+  .bar .icon-btn:hover { background: rgba(255, 255, 255, .14); color: #fff; }
+  body.checking #openSettings, body.check-failed #openSettings, body.outdated #openSettings { visibility: hidden; }
+
+  /* ---------- Common controls ---------- */
+  .icon-btn {
+    flex: none; width: 24px; height: 24px; display: grid; place-items: center; padding: 0;
+    border: 0; border-radius: 7px; cursor: pointer; background: transparent;
+    color: var(--figma-color-text-secondary); transition: background .15s, color .15s;
+  }
+  .icon-btn:hover { background: var(--figma-color-bg-hover); color: var(--figma-color-text); }
+  .icon-btn svg { width: 16px; height: 16px; }
+  .icon-btn.danger:hover { color: var(--danger); }
+
+  .btn {
+    padding: 7px 12px; border-radius: 8px; cursor: pointer; font-weight: 600;
+    border: 1px solid var(--figma-color-border); background: var(--figma-color-bg); transition: background .15s, filter .15s;
+  }
+  .btn:hover { background: var(--figma-color-bg-hover); }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .btn.primary:hover { filter: brightness(1.08); }
+  .btn.primary:disabled { filter: none; }
+  .btn.ghost-danger { border-color: transparent; background: none; color: var(--danger); font-weight: 500; }
+  .btn.ghost-danger:hover { background: rgba(229, 72, 77, .1); }
+  .btn.danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+  .btn.small { padding: 4px 9px; font-size: 11px; }
+  .btn.block { display: block; width: 100%; margin-top: 16px; }
+
+  .seg {
+    display: flex; padding: 3px; gap: 3px; border-radius: 10px;
+    background: var(--figma-color-bg-secondary); border: 1px solid var(--figma-color-border);
+  }
+  .seg button {
+    flex: 1; min-width: 0; font-weight: 500; padding: 7px 4px; border: 0; border-radius: 7px; cursor: pointer;
+    background: transparent; color: var(--figma-color-text-secondary); transition: all .15s;
+  }
+  .seg button:not(.on):not(:disabled):hover { color: var(--figma-color-text); background: var(--figma-color-bg-hover); }
+  .seg button.on { background: var(--figma-color-bg); color: var(--figma-color-text); font-weight: 600; box-shadow: var(--raised); }
+  .seg button:disabled { opacity: .4; cursor: default; }
+
+  .input, textarea {
+    width: 100%; border-radius: 8px; border: 1px solid var(--figma-color-border);
+    background: var(--figma-color-bg); outline: none; transition: border-color .15s;
+  }
+  .input { padding: 7px 9px; }
+  .input:focus, textarea:focus { border-color: var(--focus); }
+
+  .field { margin-top: 16px; }
+  .lbl { font-size: 11px; font-weight: 600; color: var(--figma-color-text-secondary); margin-bottom: 6px; }
+  .hint { font-size: 11px; color: var(--figma-color-text-tertiary); margin-top: 6px; }
+
+  .tabs { display: flex; gap: 16px; margin-top: 4px; }
+  .tabs button {
+    padding: 8px 0; border: 0; background: none; cursor: pointer; font-weight: 600;
+    color: var(--figma-color-text-secondary); border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .tabs button:hover { color: var(--figma-color-text); }
+  .tabs button.on { color: var(--figma-color-text); border-bottom-color: var(--figma-color-text); }
+
+  /* Selected target card */
+  .target {
+    display: flex; align-items: center; gap: 10px; padding: 9px 11px; border-radius: 10px;
+    background: var(--figma-color-bg-secondary); border: 1px solid var(--figma-color-border);
+  }
+  .target .ico {
+    flex: none; width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center;
+    background: var(--figma-color-bg); color: var(--figma-color-text-secondary); box-shadow: var(--raised);
+  }
+  .target .ico svg { width: 16px; height: 16px; }
+  .target .meta { min-width: 0; flex: 1; }
+  .target .name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .target .sub { color: var(--figma-color-text-secondary); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .badge {
+    flex: none; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 999px;
+    background: var(--figma-color-bg); border: 1px solid var(--figma-color-border); color: var(--figma-color-text-secondary);
+  }
+
+  .banner {
+    display: none; margin-top: 10px; padding: 10px 12px; border-radius: 10px;
+    background: var(--warn-bg); color: var(--warn);
+  }
+  .banner.show { display: block; }
+  .banner b { display: block; margin-bottom: 2px; }
+  .banner .actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  .banner.info { background: var(--figma-color-bg-secondary); color: var(--figma-color-text); border: 1px solid var(--figma-color-border); }
+  .banner.ok { background: var(--ok-bg); color: var(--figma-color-text); }
+  .banner.ok b { color: var(--ok); }
+  .banner.err { background: rgba(229, 72, 77, .1); color: var(--danger); }
+
+  .add {
+    border: 1px dashed var(--figma-color-border); background: none; border-radius: 8px; cursor: pointer;
+    padding: 6px 10px; color: var(--figma-color-text-secondary); font-weight: 500; width: 100%; text-align: left;
+  }
+  .add:hover { color: var(--figma-color-text); background: var(--figma-color-bg-hover); }
+
+  .placeholder {
+    display: none; flex-direction: column; align-items: center; justify-content: center;
+    gap: 6px; padding: 60px 24px; text-align: center;
+  }
+  .placeholder .big, .gate .big, .update .big {
+    width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; margin-bottom: 6px;
+    background: var(--figma-color-bg-secondary); color: var(--figma-color-text-secondary);
+  }
+  .placeholder .big svg { width: 24px; height: 24px; }
+  .placeholder b { font-size: 13px; }
+  .placeholder span { color: var(--figma-color-text-secondary); }
+
+  /* Overview lists */
+  .page-name {
+    margin: 16px 0 6px; font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--figma-color-text-tertiary);
+  }
+  .page-name small { text-transform: none; letter-spacing: 0; font-weight: 500; }
+  .entry {
+    display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; margin-bottom: 4px;
+    border-radius: 9px; border: 1px solid var(--figma-color-border); background: var(--figma-color-bg);
+    cursor: pointer; text-align: left;
+  }
+  .entry:hover { background: var(--figma-color-bg-hover); }
+  .entry .meta { flex: 1; min-width: 0; }
+  .entry .name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .entry .sub { font-size: 11px; color: var(--figma-color-text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ov-empty { padding: 40px 12px; text-align: center; color: var(--figma-color-text-secondary); }
+  .ov-foot { margin-top: 18px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+  .emoji { flex: none; font-size: 12px; line-height: 1; }
+
+  /* Confirm dialog */
+  .confirm {
+    position: fixed; inset: 0; z-index: 8; display: none; align-items: center; justify-content: center;
+    padding: 24px; background: rgba(0, 0, 0, .35);
+  }
+  .confirm.show { display: flex; }
+  .confirm .box {
+    background: var(--figma-color-bg); border-radius: 12px; padding: 16px; max-width: 280px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, .25);
+  }
+  .confirm h3 { margin: 0 0 4px; font-size: 13px; }
+  .confirm p { margin: 0; color: var(--figma-color-text-secondary); }
+  .confirm .actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 14px; }
+
+  /* ---------- Screens ---------- */
+  .screen { flex: 1; min-height: 0; display: none; flex-direction: column; }
+  body[data-screen="home"] #s-home,
+  body[data-screen="checklist"] #s-checklist,
+  body[data-screen="readme"] #s-readme,
+  body[data-screen="note"] #s-note,
+  body[data-screen="images"] #s-images { display: flex; }
+
+  .f-head { flex: none; padding: 10px 16px 0 10px; border-bottom: 1px solid var(--figma-color-border); }
+  .f-title { display: flex; align-items: center; gap: 6px; min-height: 28px; padding-bottom: 10px; }
+  .f-head .tabs { padding-left: 6px; }
+  .f-title h1 { flex: 1; min-width: 0; margin: 0; font-size: 14px; line-height: 1.25; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .f-head:has(.tabs) .f-title { padding-bottom: 2px; }
+  .scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 16px 16px; }
+  .f-foot {
+    flex: none; display: none; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 10px 16px; border-top: 1px solid var(--figma-color-border);
+  }
+  .info { min-width: 0; color: var(--figma-color-text-secondary); font-size: 11px; }
+  .info div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .foot-actions { flex: none; display: flex; gap: 4px; }
+
+  /* ---------- Home ---------- */
+  .home-lbl {
+    margin: 2px 2px 8px; font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--figma-color-text-tertiary);
+  }
+  .tool {
+    display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px; margin-bottom: 8px;
+    border-radius: 12px; border: 1px solid var(--figma-color-border); background: var(--figma-color-bg);
+    cursor: pointer; text-align: left; transition: background .15s, border-color .15s;
+  }
+  .tool:hover { background: var(--figma-color-bg-hover); border-color: var(--figma-color-border-strong); }
+  .tool .t-ico {
+    flex: none; width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center;
+    background: var(--figma-color-bg-secondary); color: var(--figma-color-text);
+  }
+  .tool .t-ico svg { width: 18px; height: 18px; }
+  .tool .t-meta { flex: 1; min-width: 0; }
+  .tool .t-meta b { display: block; font-size: 13px; letter-spacing: -.01em; }
+  .tool .t-meta span { display: block; color: var(--figma-color-text-secondary); font-size: 11px; }
+  .tool .chev { flex: none; width: 14px; height: 14px; color: var(--figma-color-text-tertiary); }
+  .home-foot { margin-top: 14px; padding: 0 2px; font-size: 11px; color: var(--figma-color-text-tertiary); }
+
+  /* ---------- Handoff Pre Checklist ---------- */
+  #s-checklist .ck-top { flex: none; padding: 14px 16px 4px; }
+  #s-checklist .status {
+    flex: none; display: flex; align-items: center; gap: 5px; height: 24px;
+    padding: 0 10px 0 8px; border-radius: 999px; font-size: 11px; font-weight: 600;
+    background: var(--figma-color-bg-secondary); color: var(--figma-color-text-secondary);
+    transition: background .25s, color .25s;
+  }
+  #s-checklist .status svg { width: 14px; height: 14px; display: none; }
+  #s-checklist.all-done .status { background: var(--green); color: #fff; box-shadow: 0 2px 10px rgba(27,196,125,.4); }
+  #s-checklist.all-done .status svg { display: block; animation: pop .35s ease-out; }
+  #s-checklist.empty .status { display: none; }
+  @keyframes pop { 0% { transform: scale(.3); } 70% { transform: scale(1.25); } 100% { transform: scale(1); } }
+
+  #s-checklist .progress { height: 6px; margin-top: 12px; border-radius: 999px; background: var(--figma-color-bg-secondary); overflow: hidden; }
+  #s-checklist .progress i {
+    display: block; height: 100%; width: 0; border-radius: inherit;
+    background: var(--figma-color-text-secondary); transition: width .3s ease, background .25s;
+  }
+  #s-checklist.all-done .progress i { background: var(--green); }
+  #s-checklist.empty .ck-top { display: none; }
+
+  #s-checklist ul { flex: 1; min-height: 0; overflow-y: auto; list-style: none; margin: 0; padding: 8px 12px 12px; }
+  #s-checklist.empty ul { display: none; }
+  #s-checklist li { margin-bottom: 6px; }
+  #s-checklist label {
+    display: flex; align-items: flex-start; gap: 10px; cursor: pointer;
+    padding: 10px 12px; border-radius: 10px;
+    border: 1px solid var(--figma-color-border);
+    background: var(--figma-color-bg);
+    transition: border-color .15s, background .15s, transform .1s;
+  }
+  #s-checklist label:hover { background: var(--figma-color-bg-hover); border-color: var(--figma-color-border-strong); }
+  #s-checklist label:active { transform: scale(.995); }
+  #s-checklist label input { position: absolute; opacity: 0; pointer-events: none; }
+  #s-checklist .box {
+    flex: none; width: 18px; height: 18px; margin-top: 1px; border-radius: 6px;
+    border: 1.5px solid var(--figma-color-border-strong);
+    display: grid; place-items: center; transition: all .15s;
+  }
+  #s-checklist .box svg { width: 12px; height: 12px; stroke: #fff; opacity: 0; transform: scale(.5); transition: all .15s; }
+  #s-checklist .text { flex: 1; transition: color .15s; }
+  #s-checklist li.done label { background: var(--green-soft); border-color: transparent; }
+  #s-checklist li.done .box { background: var(--green); border-color: var(--green); }
+  #s-checklist li.done .box svg { opacity: 1; transform: scale(1); }
+  #s-checklist li.done .text { color: var(--figma-color-text-secondary); }
+  #s-checklist label input:focus-visible + .box { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+  #s-checklist .placeholder { flex: 1; min-height: 0; padding: 0 32px 32px; }
+  #s-checklist.empty .placeholder { display: flex; }
+  #s-checklist .f-foot { display: flex; }
+  #s-checklist.empty .f-foot { display: none; }
+  #s-checklist .info .count { font-variant-numeric: tabular-nums; color: var(--figma-color-text); font-weight: 500; }
+
+  /* ---------- Design ReadMe ---------- */
+  #s-readme .view { display: none; }
+  #s-readme.view-spec #rm-spec, #s-readme.view-overview #rm-overview { display: block; }
+  #s-readme.no-target .placeholder { display: flex; }
+  #s-readme.no-target #rm-form { display: none; }
+  #s-readme.view-spec.has-target .f-foot { display: flex; }
+
+  #rm-statusSeg button {
+    color: var(--figma-color-text); display: flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap;
+  }
+  #rm-statusSeg button.on { color: #fff; box-shadow: none; }
+  #rm-statusSeg button[data-status="wip"].on { background: var(--wip); }
+  #rm-statusSeg button[data-status="review"].on { background: var(--review); }
+  #rm-statusSeg button[data-status="ready"].on { background: var(--ready); }
+
+  #s-readme textarea { padding: 8px 9px; min-height: 120px; resize: vertical; line-height: 1.5; }
+
+  #s-readme .owner { display: grid; grid-template-columns: 82px 1fr; align-items: start; gap: 8px; margin-bottom: 6px; }
+  #s-readme .owner > span { padding-top: 7px; color: var(--figma-color-text-secondary); }
+  #s-readme .chips {
+    width: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 4px; min-height: 32px; cursor: text;
+    border-radius: 8px; border: 1px solid var(--figma-color-border); background: var(--figma-color-bg); transition: border-color .15s;
+  }
+  #s-readme .chips:focus-within { border-color: var(--focus); }
+  #s-readme .chip {
+    display: inline-flex; align-items: center; gap: 2px; height: 22px; padding: 0 3px 0 8px; border-radius: 6px;
+    background: var(--figma-color-bg-secondary); box-shadow: inset 0 0 0 1px var(--figma-color-border); font-weight: 500; line-height: 1;
+  }
+  #s-readme .chip span { display: block; line-height: 16px; white-space: nowrap; }
+  #s-readme .chip button {
+    flex: none; width: 16px; height: 16px; padding: 0; border: 0; border-radius: 4px; cursor: pointer; background: none;
+    color: var(--figma-color-text-secondary); display: grid; place-items: center;
+  }
+  #s-readme .chip button svg { display: block; }
+  #s-readme .chip button:hover { background: var(--figma-color-bg-hover); color: var(--figma-color-text); }
+  #s-readme .chips input { flex: 1; min-width: 80px; height: 22px; border: 0; outline: none; background: none; padding: 0 4px; }
+
+  .suggest {
+    position: fixed; z-index: 4; display: none; max-height: 240px; overflow-y: auto; padding: 4px;
+    border-radius: 9px; border: 1px solid var(--figma-color-border); background: var(--figma-color-bg);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, .14);
+  }
+  .suggest.show { display: block; }
+  .sg-item {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    height: 28px; padding: 0 4px 0 8px; border-radius: 6px; cursor: pointer;
+  }
+  .sg-item span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sg-item:hover, .sg-item.on { background: var(--figma-color-bg-hover); }
+  .sg-item button {
+    flex: none; width: 20px; height: 20px; padding: 0; border: 0; border-radius: 5px; cursor: pointer;
+    background: none; color: var(--figma-color-text-tertiary); display: grid; place-items: center;
+  }
+  .sg-item button:hover { background: var(--figma-color-bg-secondary); color: var(--danger); }
+  #s-readme .link-row { display: flex; gap: 4px; margin-bottom: 6px; }
+  #s-readme .link-row .input { flex: 1; }
+
+  #s-readme .counts { display: flex; gap: 6px; flex-wrap: wrap; }
+  #s-readme .counts button {
+    display: flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; cursor: pointer;
+    border: 1px solid var(--figma-color-border); background: var(--figma-color-bg); font-weight: 500;
+  }
+  #s-readme .counts button b { font-variant-numeric: tabular-nums; }
+  #s-readme .counts button:hover { background: var(--figma-color-bg-hover); }
+  #s-readme .counts button.on { border-color: var(--figma-color-border-strong); background: var(--figma-color-bg-secondary); font-weight: 600; }
+
+  /* ---------- Frame Note ---------- */
+  #s-note .view { display: none; }
+  #s-note.view-note #nt-note, #s-note.view-overview #nt-overview { display: block; }
+  #s-note.view-note.has-target .f-foot, #s-note.view-note.multi-target .f-foot { display: flex; }
+  #nt-form, #nt-multi { display: none; }
+  #s-note.has-target #nt-form, #s-note.multi-target #nt-multi { display: block; }
+  #s-note.no-target .placeholder { display: flex; }
+  #s-note .placeholder.warn .big { background: var(--warn-bg); color: var(--warn); }
+  #s-note .placeholder .btn { margin-top: 10px; display: none; }
+  #s-note .placeholder.orphan .btn { display: block; }
+
+  #s-note textarea {
+    display: block; padding: 8px 9px; min-height: 72px; resize: none; overflow: hidden; line-height: 1.5;
+  }
+  #s-note .para {
+    border-radius: 10px; border: 1px solid var(--figma-color-border); background: var(--figma-color-bg-secondary);
+    padding: 6px; margin-bottom: 8px;
+  }
+  #s-note .para:focus-within { border-color: var(--focus); }
+  #s-note .para textarea { border: 0; background: var(--figma-color-bg); }
+  #s-note .para-meta {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 5px 2px 0 4px; font-size: 11px; color: var(--figma-color-text-tertiary);
+  }
+  #s-note .para-meta span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #s-note .para-meta .icon-btn svg { width: 10px; height: 10px; }
+  #s-note .para-meta .num { font-weight: 600; color: var(--figma-color-text-secondary); margin-right: 4px; }
+
+  #s-note .frame-list { border-radius: 10px; border: 1px solid var(--figma-color-border); overflow: hidden; }
+  #s-note .frame-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 10px;
+    border-top: 1px solid var(--figma-color-border);
+  }
+  #s-note .frame-row:first-child { border-top: 0; }
+  #s-note .frame-row .name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #s-note .frame-row .count { flex: none; font-size: 11px; color: var(--figma-color-text-tertiary); }
+
+  #s-note .counts { display: flex; gap: 6px; flex-wrap: wrap; color: var(--figma-color-text-secondary); }
+  #s-note .counts b { color: var(--figma-color-text); font-variant-numeric: tabular-nums; }
+  #s-note .entry { align-items: flex-start; }
+  #s-note .entry .dot { flex: none; width: 10px; height: 10px; margin-top: 3px; border-radius: 2px; background: var(--sticky); box-shadow: 0 0 0 1px rgba(0, 0, 0, .12); }
+  #s-note .entry .preview {
+    font-size: 11px; color: var(--figma-color-text-tertiary); margin-top: 2px;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  #s-note .entry.orphan { cursor: default; align-items: center; border-color: rgba(245, 158, 11, .5); background: var(--warn-bg); }
+  #s-note .entry.orphan .dot { margin-top: 0; }
+
+  /* ---------- Image Optimizer ---------- */
+  #s-images .scroll { padding-top: 4px; }
+  #s-images .field { margin-top: 14px; }
+  #s-images .seg button { padding: 6px 4px; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #s-images .seg button small { display: block; font-size: 9px; font-weight: 500; opacity: .75; }
+  #s-images .seg button .warn-ico { color: var(--warn); }
+  #s-images .banner { margin-top: 8px; padding: 9px 11px; font-size: 11px; }
+  #s-images .banner b { margin-bottom: 1px; font-size: 12px; }
+
+  #s-images .results { margin-top: 18px; display: none; }
+  #s-images.has-results .results { display: block; }
+  #s-images.has-items .f-foot { display: flex; }
+  #s-images .res-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+  #s-images .counts { color: var(--figma-color-text-secondary); }
+  #s-images .counts b { color: var(--figma-color-text); font-variant-numeric: tabular-nums; }
+  #s-images .counts .gain { color: var(--ok); }
+  #s-images .entry { cursor: default; }
+  #s-images .entry input { flex: none; margin: 0; accent-color: var(--figma-color-text); cursor: pointer; }
+  #s-images .thumb {
+    flex: none; width: 40px; height: 40px; border-radius: 6px; overflow: hidden; display: grid; place-items: center;
+    border: 1px solid var(--figma-color-border); cursor: pointer;
+    /* checkerboard, so transparent PNGs read as transparent */
+    background: repeating-conic-gradient(var(--figma-color-bg-secondary) 0 25%, var(--figma-color-bg) 0 50%) 0 0 / 10px 10px;
+  }
+  #s-images .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  #s-images .thumb.loading::after {
+    content: ''; width: 12px; height: 12px; border-radius: 50%;
+    border: 2px solid var(--figma-color-border); border-top-color: var(--figma-color-text-secondary); animation: spin .8s linear infinite;
+  }
+  #s-images .entry .meta { cursor: pointer; }
+  #s-images .entry .meta:hover .name { text-decoration: underline; }
+  #s-images .entry .side { flex: none; text-align: right; }
+  #s-images .entry .size { font-weight: 600; font-variant-numeric: tabular-nums; }
+  #s-images .entry .gain { font-size: 11px; font-weight: 600; color: var(--ok); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  #s-images .entry .gain.est { opacity: .7; }
+  #s-images .entry .gain.none { color: var(--figma-color-text-tertiary); font-weight: 500; }
+  #s-images .entry.no-gain { opacity: .6; }
+  #s-images .empty { padding: 32px 12px; text-align: center; color: var(--figma-color-text-secondary); }
+  #s-images .info { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #s-images .status { margin-top: 10px; min-height: 16px; font-size: 11px; color: var(--figma-color-text-secondary); text-align: center; }
+
+  /* ---------- Settings ---------- */
+  .settings {
+    position: fixed; inset: var(--bar-h) 0 0 0; z-index: 5; display: none; flex-direction: column; background: var(--figma-color-bg);
+  }
+  body.settings-open .settings { display: flex; }
+  .s-head { display: flex; align-items: center; gap: 6px; padding: 12px 16px 12px 10px; border-bottom: 1px solid var(--figma-color-border); }
+  .s-head h2 { margin: 0; font-size: 14px; letter-spacing: -.01em; }
+  .s-body { padding: 16px; display: flex; flex-direction: column; gap: 18px; }
+  .s-ver { color: var(--figma-color-text-tertiary); font-size: 11px; }
+
+  /* ---------- Version check: blocks every tool until it passes ---------- */
+  .gate, .update {
+    position: fixed; inset: var(--bar-h) 0 0 0; display: none; flex-direction: column;
+    align-items: center; justify-content: center; gap: 8px; padding: 32px; text-align: center;
+    background: var(--figma-color-bg);
+  }
+  .gate { z-index: 9; }
+  .update { z-index: 10; }
+  body.checking .gate, body.check-failed .gate { display: flex; }
+  body.outdated .update { display: flex; }
+  .gate .big, .update .big { width: 56px; height: 56px; border-radius: 16px; margin-bottom: 8px; }
+  .gate .big svg, .update .big svg { width: 28px; height: 28px; }
+  .gate h2, .update h2 { margin: 0; font-size: 15px; letter-spacing: -.01em; }
+  .gate p, .update p { margin: 0; color: var(--figma-color-text-secondary); max-width: 250px; }
+  .update .versions { font-variant-numeric: tabular-nums; font-size: 11px; margin-top: 2px; }
+  .update a.btn { margin-top: 14px; text-decoration: none; }
+  .update .how { margin-top: 10px; font-size: 11px; }
+  .gate .spinner {
+    width: 26px; height: 26px; border-radius: 50%; margin-bottom: 8px;
+    border: 3px solid var(--figma-color-bg-secondary); border-top-color: var(--figma-color-text-secondary);
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .gate .big { display: none; }
+  .gate .retry { display: none; margin-top: 14px; }
+  body.check-failed .gate .spinner { display: none; }
+  body.check-failed .gate .big { display: grid; }
+  body.check-failed .gate .retry { display: block; }
+  body.checking .gate .failed-only, body.check-failed .gate .checking-only { display: none; }
+
+  /* Small language switch pinned to the bottom of the update / version-check screens */
+  .lang-mini {
+    position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 11; display: none;
+    padding: 2px; gap: 2px; border-radius: 8px;
+    background: var(--figma-color-bg-secondary); border: 1px solid var(--figma-color-border);
+  }
+  body.checking .lang-mini, body.check-failed .lang-mini, body.outdated .lang-mini { display: flex; }
+  .lang-mini button {
+    font-size: 10px; font-weight: 600; line-height: 1; padding: 4px 9px; border: 0; border-radius: 6px;
+    cursor: pointer; background: transparent; color: var(--figma-color-text-secondary); transition: all .15s;
+  }
+  .lang-mini button:hover { color: var(--figma-color-text); }
+  .lang-mini button.on { background: var(--figma-color-bg); color: var(--figma-color-text); box-shadow: var(--raised); }
+</style>
+</head>
+<body class="loading" data-screen="home">
+  <header class="bar">
+    <button class="brand" id="goHome" data-i18n-title="home">
+      <img class="logo" alt="">
+      <span><b>Pyde Design</b><small id="ver"></small></span>
+    </button>
+    <button class="icon-btn" id="openSettings" data-i18n-title="settings">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M2 4.5h6M11.5 4.5H14M2 11.5h2.5M8 11.5h6"/><circle cx="9.75" cy="4.5" r="1.75"/><circle cx="6.25" cy="11.5" r="1.75"/></svg>
+    </button>
+  </header>
+
+  <!-- ==================== Home ==================== -->
+  <div class="screen" id="s-home">
+    <main class="scroll">
+      <div class="home-lbl" data-i18n="tools"></div>
+      <button class="tool" data-go="checklist">
+        <span class="t-ico"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="14" height="14" rx="3"/><path d="M6.5 10.2l2.3 2.3 4.7-5"/></svg></span>
+        <span class="t-meta"><b data-i18n="checklistName"></b><span data-i18n="checklistDesc"></span></span>
+        <svg class="chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3l5 5-5 5"/></svg>
+      </button>
+      <button class="tool" data-go="readme">
+        <span class="t-ico"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2.5h6.5L15 6v11.5H5z"/><path d="M11.5 2.5V6H15M7.5 10h5M7.5 13h5"/></svg></span>
+        <span class="t-meta"><b data-i18n="readmeName"></b><span data-i18n="readmeDesc"></span></span>
+        <svg class="chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3l5 5-5 5"/></svg>
+      </button>
+      <button class="tool" data-go="note">
+        <span class="t-ico"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 3.5h13v8.5l-4.5 4.5h-8.5z"/><path d="M16.5 12H12v4.5M6.5 7.5h7M6.5 10.5h4"/></svg></span>
+        <span class="t-meta"><b data-i18n="noteName"></b><span data-i18n="noteDesc"></span></span>
+        <svg class="chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3l5 5-5 5"/></svg>
+      </button>
+      <button class="tool" data-go="images">
+        <span class="t-ico"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3.5" width="15" height="13" rx="2"/><circle cx="7" cy="8" r="1.5"/><path d="M17.5 13l-4-4-8 7.5"/></svg></span>
+        <span class="t-meta"><b data-i18n="imagesName"></b><span data-i18n="imagesDesc"></span></span>
+        <svg class="chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3l5 5-5 5"/></svg>
+      </button>
+      <div class="home-foot" data-i18n="homeHint"></div>
+    </main>
+  </div>
+
+  <!-- ==================== Handoff Pre Checklist ==================== -->
+  <div class="screen feature empty" id="s-checklist">
+    <div class="f-head">
+      <div class="f-title">
+        <button class="icon-btn back" data-i18n-title="back"></button>
+        <h1>Handoff Pre Checklist</h1>
+        <div class="status">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"/></svg>
+          <span id="ck-statusText"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="ck-top">
+      <div class="target">
+        <div class="ico" id="ck-targetIco"></div>
+        <div class="meta">
+          <div class="name" id="ck-targetName"></div>
+          <div class="sub" id="ck-targetSub"></div>
+        </div>
+      </div>
+      <div class="progress"><i id="ck-bar"></i></div>
+    </div>
+
+    <ul id="ck-list"></ul>
+
+    <div class="placeholder">
+      <div class="big" id="ck-phIco"></div>
+      <b id="ck-phTitle"></b>
+      <span id="ck-phText"></span>
+    </div>
+
+    <footer class="f-foot">
+      <div class="info">
+        <div class="count" id="ck-count"></div>
+        <div id="ck-upd"></div>
+      </div>
+      <button class="btn" id="ck-reset" data-i18n="reset"></button>
+    </footer>
+  </div>
+
+  <!-- ==================== Design ReadMe ==================== -->
+  <div class="screen feature view-spec no-target" id="s-readme">
+    <div class="f-head">
+      <div class="f-title">
+        <button class="icon-btn back" data-i18n-title="back"></button>
+        <h1 data-i18n="appTitle"></h1>
+      </div>
+      <nav class="tabs">
+        <button data-view="spec" class="on" data-i18n="tabSpec"></button>
+        <button data-view="overview" data-i18n="tabOverview"></button>
+      </nav>
+    </div>
+
+    <main class="scroll">
+      <section class="view" id="rm-spec">
+        <div class="placeholder">
+          <div class="big"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M5 3l14 7-6 2-2 6L5 3z"/></svg></div>
+          <b id="rm-phTitle"></b>
+          <span id="rm-phText"></span>
+        </div>
+
+        <div id="rm-form">
+          <div class="target">
+            <div class="ico" id="rm-targetIco"></div>
+            <div class="meta">
+              <div class="name" id="rm-targetName"></div>
+              <div class="sub" id="rm-targetSub"></div>
+            </div>
+            <span class="badge" id="rm-badge"></span>
+          </div>
+
+          <div class="banner info" id="rm-staleBanner">
+            <b data-i18n="staleTitle"></b>
+            <span id="rm-staleText"></span>
+            <div class="actions">
+              <button class="btn small" id="rm-goBack"></button>
+              <button class="btn small" id="rm-discard" data-i18n="discard"></button>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="lbl" data-i18n="status"></div>
+            <div class="seg" id="rm-statusSeg">
+              <button data-status="wip"><span class="emoji">🚧</span><span data-i18n="wip"></span></button>
+              <button data-status="review"><span class="emoji">👀</span><span data-i18n="review"></span></button>
+              <button data-status="ready"><span class="emoji">✅</span><span data-i18n="ready"></span></button>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="lbl" data-i18n="owners"></div>
+            <div class="owner"><span data-i18n="design"></span><div class="chips" data-role="design"></div></div>
+            <div class="owner"><span data-i18n="dev"></span><div class="chips" data-role="dev"></div></div>
+            <div class="owner"><span data-i18n="product"></span><div class="chips" data-role="product"></div></div>
+          </div>
+
+          <div class="field">
+            <div class="lbl" data-i18n="jira"></div>
+            <div id="rm-jiraList"></div>
+            <button class="add" data-add="jira" data-i18n="addJira"></button>
+          </div>
+
+          <div class="field">
+            <div class="lbl" data-i18n="slack"></div>
+            <div id="rm-slackList"></div>
+            <button class="add" data-add="slack" data-i18n="addSlack"></button>
+          </div>
+
+          <div class="field">
+            <div class="lbl" data-i18n="notes"></div>
+            <textarea id="rm-notes" data-i18n-placeholder="notesPh"></textarea>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="rm-overview">
+        <div class="counts" id="rm-counts"></div>
+        <div id="rm-ovList"></div>
+        <div class="ov-foot">
+          <span class="hint" data-i18n="ovHint"></span>
+          <button class="btn small" id="rm-scanAll" data-i18n="scanAll"></button>
+        </div>
+      </section>
+    </main>
+
+    <footer class="f-foot">
+      <div class="info">
+        <div id="rm-upd"></div>
+      </div>
+      <div class="foot-actions">
+        <button class="btn ghost-danger" id="rm-remove" data-i18n="remove"></button>
+        <button class="btn primary" id="rm-save"></button>
+      </div>
+    </footer>
+
+    <div class="suggest" id="rm-suggest"></div>
+
+    <div class="confirm" id="rm-confirm">
+      <div class="box">
+        <h3 data-i18n="removeTitle"></h3>
+        <p data-i18n="removeText"></p>
+        <div class="actions">
+          <button class="btn" id="rm-cancelRemove" data-i18n="cancel"></button>
+          <button class="btn danger" id="rm-confirmRemove" data-i18n="remove"></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== Frame Note ==================== -->
+  <div class="screen feature view-note no-target" id="s-note">
+    <div class="f-head">
+      <div class="f-title">
+        <button class="icon-btn back" data-i18n-title="back"></button>
+        <h1 data-i18n="appTitle"></h1>
+      </div>
+      <nav class="tabs">
+        <button data-view="note" class="on" data-i18n="tabNote"></button>
+        <button data-view="overview" data-i18n="tabOverview"></button>
+      </nav>
+    </div>
+
+    <main class="scroll">
+      <section class="view" id="nt-note">
+        <div class="placeholder" id="nt-placeholder">
+          <div class="big" id="nt-phIco"></div>
+          <b id="nt-phTitle"></b>
+          <span id="nt-phText"></span>
+          <button class="btn" id="nt-deleteOrphan" data-i18n="deleteNote"></button>
+        </div>
+
+        <div id="nt-form">
+          <div class="target">
+            <div class="ico" id="nt-targetIco"></div>
+            <div class="meta">
+              <div class="name" id="nt-targetName"></div>
+              <div class="sub" id="nt-targetSub"></div>
+            </div>
+            <span class="badge" id="nt-badge"></span>
+          </div>
+
+          <div class="banner info" id="nt-staleBanner">
+            <b data-i18n="staleTitle"></b>
+            <span id="nt-staleText"></span>
+            <div class="actions">
+              <button class="btn small" id="nt-goBack"></button>
+              <button class="btn small" id="nt-discard" data-i18n="discard"></button>
+            </div>
+          </div>
+
+          <div class="banner" id="nt-overlapBanner">
+            <b data-i18n="overlapTitle"></b>
+            <span id="nt-overlapText"></span>
+          </div>
+
+          <div class="field">
+            <div class="lbl" data-i18n="notes"></div>
+            <div id="nt-paras"></div>
+            <button class="add" id="nt-addPara" data-i18n="addPara"></button>
+            <div class="hint" data-i18n="parasHint"></div>
+          </div>
+        </div>
+
+        <div id="nt-multi">
+          <div class="target">
+            <div class="ico" id="nt-multiIco"></div>
+            <div class="meta">
+              <div class="name" id="nt-multiName"></div>
+              <div class="sub" data-i18n="multiSub"></div>
+            </div>
+          </div>
+
+          <div class="banner" id="nt-outsideBanner">
+            <b data-i18n="outsideTitle"></b>
+            <span id="nt-outsideText"></span>
+          </div>
+
+          <div class="field">
+            <div class="frame-list" id="nt-frameList"></div>
+          </div>
+
+          <div class="field">
+            <div class="lbl" data-i18n="addAllLbl"></div>
+            <textarea id="nt-bulk" data-i18n-placeholder="notePh"></textarea>
+            <div class="hint" data-i18n="addAllHint"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="nt-overview">
+        <div class="counts" id="nt-counts"></div>
+        <div id="nt-ovList"></div>
+        <div class="ov-foot">
+          <span class="hint" data-i18n="ovHint"></span>
+          <button class="btn small" id="nt-scanAll" data-i18n="scanAll"></button>
+        </div>
+      </section>
+    </main>
+
+    <footer class="f-foot">
+      <div class="info">
+        <div id="nt-upd"></div>
+      </div>
+      <div class="foot-actions">
+        <button class="btn ghost-danger" id="nt-remove" data-i18n="remove"></button>
+        <button class="btn primary" id="nt-save"></button>
+      </div>
+    </footer>
+
+    <div class="confirm" id="nt-confirm">
+      <div class="box">
+        <h3 data-i18n="removeTitle"></h3>
+        <p data-i18n="removeText"></p>
+        <div class="actions">
+          <button class="btn" id="nt-cancelRemove" data-i18n="cancel"></button>
+          <button class="btn danger" id="nt-confirmRemove" data-i18n="remove"></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== Image Optimizer ==================== -->
+  <div class="screen feature" id="s-images">
+    <div class="f-head">
+      <div class="f-title">
+        <button class="icon-btn back" data-i18n-title="back"></button>
+        <h1 data-i18n="appTitle"></h1>
+      </div>
+    </div>
+
+    <main class="scroll">
+      <div class="field">
+        <div class="lbl" data-i18n="scope"></div>
+        <div class="seg" id="io-scope">
+          <button data-v="selection" data-i18n="scopeSelection"></button>
+          <button data-v="page" data-i18n="scopePage"></button>
+          <button data-v="document" data-i18n="scopeDocument"></button>
+        </div>
+        <div class="hint" id="io-scopeHint"></div>
+      </div>
+
+      <div class="field">
+        <div class="lbl" data-i18n="resolution"></div>
+        <div class="seg" id="io-scale">
+          <button data-v="2">2x <span class="warn-ico">⚠</span><small data-i18n="notRecommended"></small></button>
+          <button data-v="3">3x<small data-i18n="recommended"></small></button>
+          <button data-v="4">4x<small>&nbsp;</small></button>
+        </div>
+        <div class="banner" id="io-scaleWarn">
+          <b data-i18n="scale2Title"></b>
+          <span data-i18n="scale2Text"></span>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="lbl" data-i18n="minSize"></div>
+        <div class="seg" id="io-minSize">
+          <button data-v="102400">100 KB+</button>
+          <button data-v="512000">500 KB+</button>
+          <button data-v="1048576">1 MB+</button>
+        </div>
+        <div class="hint" data-i18n="minSizeHint"></div>
+      </div>
+
+      <button class="btn primary block" id="io-scan" data-i18n="scan"></button>
+      <div class="banner" id="io-resultBanner"><b id="io-resultTitle"></b><span id="io-resultText"></span></div>
+      <div class="status" id="io-status"></div>
+
+      <div class="results">
+        <div class="res-head">
+          <div class="counts" id="io-counts"></div>
+          <button class="btn small" id="io-toggle"></button>
+        </div>
+        <div id="io-list"></div>
+      </div>
+    </main>
+
+    <footer class="f-foot">
+      <div class="info" id="io-selInfo"></div>
+      <button class="btn primary" id="io-apply"></button>
+    </footer>
+  </div>
+
+  <!-- ==================== Settings ==================== -->
+  <div class="settings">
+    <div class="s-head">
+      <button class="icon-btn back" id="closeSettings" data-i18n-title="back"></button>
+      <h2 data-i18n="settings"></h2>
+    </div>
+    <div class="s-body">
+      <div>
+        <div class="lbl" data-i18n="language"></div>
+        <div class="seg">
+          <button data-lang="en">English</button>
+          <button data-lang="tr">Türkçe</button>
+        </div>
+        <div class="hint" data-i18n="langHint"></div>
+      </div>
+
+      <div class="s-ver" id="sVer"></div>
+    </div>
+  </div>
+
+  <div class="lang-mini">
+    <button data-lang="en">EN</button>
+    <button data-lang="tr">TR</button>
+  </div>
+
+  <div class="gate">
+    <div class="spinner"></div>
+    <div class="big">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v5M12 16.5v.01M10.3 3.9L2.4 17.5A2 2 0 0 0 4.1 20.5h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+    </div>
+    <h2 class="checking-only" data-i18n="chkTitle"></h2>
+    <p class="checking-only" data-i18n="chkText"></p>
+    <h2 class="failed-only" data-i18n="failTitle"></h2>
+    <p class="failed-only" data-i18n="failText"></p>
+    <button class="btn primary retry" id="retry" data-i18n="retry"></button>
+  </div>
+
+  <div class="update">
+    <div class="big">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg>
+    </div>
+    <h2 data-i18n="updTitle"></h2>
+    <p data-i18n="updText"></p>
+    <p class="versions" id="versions"></p>
+    <a class="btn primary" id="download" target="_blank" rel="noopener" data-i18n="updDownload"></a>
+    <p class="how" data-i18n="updHow"></p>
+  </div>
+
+<script>
+// Only this plugin as a whole has a version; the tools inside it don't.
+const VERSION = '1.0.0';
+const REPO = 'tolgakutukcu/pydedesign-figma-masterplugin';
+const RAW = 'https://raw.githubusercontent.com/' + REPO + '/main/';
+const VERSION_URL = RAW + 'version.json';
+document.getElementById('download').href = 'https://github.com/' + REPO + '/archive/refs/heads/main.zip';
+
+const TOOLS = ['checklist', 'readme', 'note', 'images'];
+const X = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 2l6 6M8 2l-6 6"/></svg>';
+const BACK = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3L5 8l5 5"/></svg>';
+const POINTER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M5 3l14 7-6 2-2 6L5 3z"/></svg>';
+
+// Strings used outside the tools: top bar, home, settings, version check.
+const STRINGS = {
+  en: {
+    home: 'All tools', settings: 'Settings', back: 'Back', language: 'Language', version: 'Version',
+    langHint: 'Only changes the plugin interface, just for you.',
+    tools: 'Tools',
+    checklistName: 'Handoff Pre Checklist', checklistDesc: 'A handoff checklist for a root frame or section.',
+    readmeName: 'Design ReadMe', readmeDesc: 'Status, owners and links on a section, for developers and Claude.',
+    noteName: 'Frame Note', noteDesc: 'Notes for developers, right below a frame.',
+    imagesName: 'Image Optimizer', imagesDesc: 'Shrinks oversized images to the size they are shown at.',
+    homeHint: 'Every tool can also be opened directly from Plugins → Pyde Design.',
+    updTitle: 'Update required',
+    updText: 'A newer version of Pyde Design is available. Please download it to keep using its tools.',
+    updDownload: 'Download from GitHub',
+    updHow: 'Then in Figma: Plugins → Development → Import plugin from manifest… and pick the new manifest.json.',
+    installed: 'Installed', latest: 'Latest',
+    chkTitle: 'Checking for updates…', chkText: 'Making sure you are on the latest version.',
+    failTitle: 'Can’t verify version',
+    failText: 'The plugin needs an internet connection to check for updates before it can be used. Check your connection and try again.',
+    retry: 'Try again',
+    justNow: 'just now', minAgo: ' min ago', hAgo: ' h ago', dateLocale: 'en-US'
+  },
+  tr: {
+    home: 'Tüm araçlar', settings: 'Ayarlar', back: 'Geri', language: 'Dil', version: 'Sürüm',
+    langHint: 'Sadece senin için plugin arayüzünün dilini değiştirir.',
+    tools: 'Araçlar',
+    checklistName: 'Handoff Pre Checklist', checklistDesc: 'Root frame veya section için handoff kontrol listesi.',
+    readmeName: 'Tasarım Künyesi', readmeDesc: 'Section’a durum, sorumlular ve linkler; developer’lar ve Claude için.',
+    noteName: 'Frame Notu', noteDesc: 'Developer’lar için notlar, frame’in hemen altında.',
+    imagesName: 'Image Optimizer', imagesDesc: 'Büyük görselleri gösterildikleri boyuta küçültür.',
+    homeHint: 'Her araç Plugins → Pyde Design menüsünden doğrudan da açılabilir.',
+    updTitle: 'Güncelleme gerekli',
+    updText: 'Pyde Design’ın daha yeni bir sürümü var. Araçları kullanmaya devam etmek için lütfen indir.',
+    updDownload: 'GitHub’dan indir',
+    updHow: 'Sonra Figma’da: Plugins → Development → Import plugin from manifest… yolunu izleyip yeni manifest.json’ı seç.',
+    installed: 'Yüklü', latest: 'Son',
+    chkTitle: 'Güncelleme kontrol ediliyor…', chkText: 'En son sürümde olduğundan emin olunuyor.',
+    failTitle: 'Sürüm doğrulanamadı',
+    failText: 'Plugin’in kullanılabilmesi için güncelleme kontrolü gerekiyor ve bunun için internet bağlantısı lazım. Bağlantını kontrol edip tekrar dene.',
+    retry: 'Tekrar dene',
+    justNow: 'az önce', minAgo: ' dk önce', hAgo: ' sa önce', dateLocale: 'tr-TR'
+  }
+};
+
+let lang = 'en';
+let screen = 'home'; // 'home' or one of TOOLS
+let latestVersion = null;
+let remoteVersion = null; // last version number read from GitHub (shown in Settings for troubleshooting)
+const g = () => STRINGS[lang];
+
+function send(m) { parent.postMessage({ pluginMessage: m }, '*'); }
+
+function ago(ts) {
+  const s = Math.max(0, (Date.now() - ts) / 1000);
+  if (s < 60) return g().justNow;
+  if (s < 3600) return Math.floor(s / 60) + g().minAgo;
+  if (s < 86400) return Math.floor(s / 3600) + g().hAgo;
+  return new Date(ts).toLocaleDateString(g().dateLocale);
+}
+
+// Fills data-i18n / data-i18n-title / data-i18n-placeholder texts inside `root` from `strings`.
+// A tool's screen has its own strings; elements inside a tool are skipped for the shared strings.
+function translate(root, strings, skipTools) {
+  const own = (el) => !skipTools || !el.closest('.feature');
+  root.querySelectorAll('[data-i18n]').forEach((el) => { if (own(el)) el.textContent = strings[el.dataset.i18n]; });
+  root.querySelectorAll('[data-i18n-title]').forEach((el) => { if (own(el)) el.title = strings[el.dataset.i18nTitle]; });
+  root.querySelectorAll('[data-i18n-placeholder]').forEach((el) => { if (own(el)) el.placeholder = strings[el.dataset.i18nPlaceholder]; });
+}
+
+// =====================================================================================
+// Handoff Pre Checklist
+// =====================================================================================
+
+const Checklist = (() => {
+  const root = document.getElementById('s-checklist');
+  const $ = (id) => document.getElementById('ck-' + id);
+
+  // `id` is what gets stored in the file, so item text can be edited freely.
+  // `legacy` is the old text key used before ids existed, kept so existing checks still show up.
+  const ITEMS = [
+    { id: 'component-structure', legacy: 'Component yapısı korundu',
+      en: 'Component structure preserved', tr: 'Component yapısı korundu' },
+    { id: 'styles-variables', legacy: 'Renk, text ve efektler style / variable ile kullanılmış',
+      en: 'Colors, text and effects use styles / variables', tr: 'Renk, text ve efektler style / variable ile kullanılmış' },
+    { id: 'clean-layers', legacy: 'Gereksiz ve gizli layer’lar kaldırıldı',
+      en: 'Unnecessary and hidden layers removed', tr: 'Gereksiz ve gizli layer’lar kaldırıldı' },
+    { id: 'ads', legacy: 'Reklamlı ekranlarda reklam gösterimi eklendi',
+      en: 'Ad placements added on screens with ads', tr: 'Reklamlı ekranlarda reklam gösterimi eklendi' },
+    { id: 'no-extra-page', legacy: 'Feature güncellemesi ise ekstra sayfa eklenmedi',
+      en: 'No extra page added for feature updates', tr: 'Feature güncellemesi ise ekstra sayfa eklenmedi' },
+    { id: 'drafts', legacy: 'Draft’lar temizlendi',
+      en: 'Drafts cleaned up', tr: 'Draft’lar temizlendi' },
+    { id: 'notes', legacy: 'Gerekli notlar eklendi',
+      en: 'Necessary notes added', tr: 'Gerekli notlar eklendi' },
+    { id: 'auto-layout', legacy: 'Auto layout / responsive design kontrol edildi',
+      en: 'Auto layout / responsive design checked', tr: 'Auto layout / responsive design kontrol edildi' },
+    { id: 'small-screen', legacy: 'Küçük ekran kontrolü yapıldı',
+      en: 'Small screen check done', tr: 'Küçük ekran kontrolü yapıldı' },
+    { id: 'naming', legacy: 'Root frame / section isimlendirmesi yapılmış',
+      en: 'Root frame / section naming done', tr: 'Root frame / section isimlendirmesi yapılmış' },
+    { id: 'long-text', legacy: 'Yabancı diller için uzun metin testi yapıldı',
+      en: 'Long text tested for other languages', tr: 'Yabancı diller için uzun metin testi yapıldı' },
+    { id: 'states', legacy: 'Empty, loading ve hata state’leri eklendi',
+      en: 'Empty, loading and error states added', tr: 'Empty, loading ve hata state’leri eklendi' },
+    { id: 'dark-mode', legacy: 'Dark mode / tema kontrolü yapıldı',
+      en: 'Dark mode / theme check done', tr: 'Dark mode / tema kontrolü yapıldı' }
+  ];
+
+  const S = {
+    en: {
+      reset: 'Reset', completed: 'Completed', back: 'Back',
+      emptyTitle: 'Select a frame or section',
+      emptyText: 'The checklist works on sections, root frames, and frames placed directly inside a section. Nested frames and layers are not supported — select the frame or section itself.',
+      multiTitle: 'Select a single frame or section',
+      multiText: (n) => n + ' different frames / sections are selected. The checklist shows one at a time.',
+      inSection: (s) => 'in section “' + s + '”',
+      items: (n, total) => n + ' / ' + total + ' items',
+      lastUpdated: 'Last updated: ', nothingChecked: 'Nothing checked yet'
+    },
+    tr: {
+      reset: 'Sıfırla', completed: 'Tamamlandı', back: 'Geri',
+      emptyTitle: 'Bir frame veya section seç',
+      emptyText: 'Checklist; section, root frame ve doğrudan bir section içindeki frame’lerde çalışır. İç içe frame’ler ve layer’lar desteklenmez — frame veya section’ın kendisini seç.',
+      multiTitle: 'Tek bir frame veya section seç',
+      multiText: (n) => n + ' farklı frame / section seçili. Checklist aynı anda sadece birini gösterir.',
+      inSection: (s) => '“' + s + '” section’ında',
+      items: (n, total) => n + ' / ' + total + ' madde',
+      lastUpdated: 'Son güncelleme: ', nothingChecked: 'Henüz işaretlenmedi'
+    }
+  };
+
+  const ICONS = {
+    Frame: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M5.5 2v12M10.5 2v12M2 5.5h12M2 10.5h12"/></svg>',
+    Section: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M2 5.5V4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1v1.5M2 5.5h12V12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V5.5z"/></svg>'
+  };
+  const CHECK = '<svg viewBox="0 0 16 16" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"/></svg>';
+
+  const t = () => S[lang];
+  let targetId = null;
+  let lastState = { status: 'none' };
+
+  function build() {
+    ITEMS.forEach((item) => {
+      const li = document.createElement('li');
+      li.innerHTML = '<label><input type="checkbox"><span class="box">' + CHECK + '</span><span class="text"></span></label>';
+      li.querySelector('input').onchange = (e) => {
+        const value = e.target.checked;
+        li.classList.toggle('done', value); // instant feedback; real state arrives right after
+        send({ f: 'checklist', type: 'toggle', id: targetId, item: item.id, legacy: item.legacy, value });
+      };
+      li._item = item;
+      $('list').append(li);
+    });
+  }
+
+  function showEmpty(title, text) {
+    targetId = null;
+    root.classList.add('empty');
+    root.classList.remove('all-done');
+    $('phIco').innerHTML = POINTER;
+    $('phTitle').textContent = title;
+    $('phText').textContent = text;
+  }
+
+  function render(m) {
+    lastState = m;
+    if (m.status === 'none') return showEmpty(t().emptyTitle, t().emptyText);
+    if (m.status === 'multiple') return showEmpty(t().multiTitle, t().multiText(m.count));
+
+    root.classList.remove('empty');
+    targetId = m.target.id;
+    $('targetIco').innerHTML = ICONS[m.target.kind];
+    $('targetName').textContent = m.target.name;
+    $('targetSub').textContent = m.target.kind + ' · ' + (m.target.section ? t().inSection(m.target.section) : m.target.page);
+
+    const done = new Set(m.done);
+    let n = 0;
+    root.querySelectorAll('li').forEach((li) => {
+      const on = done.has(li._item.id) || done.has(li._item.legacy);
+      li.classList.toggle('done', on);
+      li.querySelector('input').checked = on;
+      if (on) n++;
+    });
+    const total = ITEMS.length;
+    $('bar').style.width = (n / total) * 100 + '%';
+    $('count').textContent = t().items(n, total);
+    $('upd').textContent = m.at ? t().lastUpdated + (m.by ? m.by + ' · ' : '') + ago(m.at) : t().nothingChecked;
+    $('statusText').textContent = n === total ? t().completed : n + '/' + total;
+    root.classList.toggle('all-done', n === total);
+  }
+
+  function applyLang() {
+    translate(root, t());
+    root.querySelectorAll('li').forEach((li) => { li.querySelector('.text').textContent = li._item[lang]; });
+    render(lastState);
+  }
+
+  function onMessage(m) {
+    if (m.type === 'state') render(m);
+  }
+
+  $('reset').onclick = () => { if (targetId) send({ f: 'checklist', type: 'reset', id: targetId }); };
+  build();
+
+  // Light sync so changes made by other designers show up.
+  setInterval(() => { if (screen === 'checklist') send({ f: 'checklist', type: 'refresh' }); }, 3000);
+
+  return { applyLang, onMessage };
+})();
+
+// =====================================================================================
+// Design ReadMe
+// =====================================================================================
+
+const ReadMe = (() => {
+  const root = document.getElementById('s-readme');
+  const $ = (id) => document.getElementById('rm-' + id);
+
+  const S = {
+    en: {
+      back: 'Back', appTitle: 'Design ReadMe',
+      tabSpec: 'ReadMe', tabOverview: 'Overview',
+      emptyTitle: 'Select a section',
+      emptyText: 'A Design ReadMe attaches to a section. You can also select an existing ReadMe card.',
+      frameTitle: 'Select the section',
+      frameText: 'A Design ReadMe can only be added to a section, not to a frame. Select the section the frame is in.',
+      multiTitle: 'Select a single section',
+      multiText: (n) => n + ' different sections are selected. A ReadMe belongs to one section at a time.',
+      inSection: (s) => 'in section “' + s + '”',
+      noSpec: 'No ReadMe yet', status: 'Status', wip: 'In progress', review: 'In review', ready: 'Ready for dev',
+      statusLong: { wip: 'Work in progress', review: 'In review', ready: 'Ready for development' },
+      owners: 'Owners', design: 'Design', dev: 'Development', product: 'Product',
+      forget: 'Remove from suggestions',
+      jira: 'Jira links', slack: 'Slack threads', addJira: '+ Add Jira link', addSlack: '+ Add Slack thread',
+      notes: 'Notes', notesPh: 'Anything developers (and Claude) should know: behaviour, interactions, rules, edge cases, decisions…',
+      create: 'Add Design ReadMe', save: 'Save changes', remove: 'Remove',
+      removeTitle: 'Remove this ReadMe?', removeText: 'The card on the canvas and the saved ReadMe data will be deleted. You can undo with ⌘Z / Ctrl+Z in Figma.',
+      cancel: 'Cancel',
+      lastUpdated: 'Last updated: ', notSaved: 'Not saved yet', unsaved: 'Unsaved changes',
+      staleTitle: 'Unsaved changes',
+      staleText: (n) => 'You left “' + n + '” without saving. Go back to it, or discard the changes. Saving here still writes to “' + n + '”.',
+      goBack: (n) => 'Go back to “' + n + '”',
+      discard: 'Discard changes',
+      ovHint: 'ReadMes on the current page are refreshed every time you open this tab. Other pages show their last known state.',
+      scanAll: 'Scan all pages', scanning: 'Scanning…', all: 'All', current: 'current page',
+      ovEmpty: 'No ReadMes in this file yet.', ovEmptyFilter: 'No ReadMes with this status.'
+    },
+    tr: {
+      back: 'Geri', appTitle: 'Tasarım Künyesi',
+      tabSpec: 'Künye', tabOverview: 'Genel bakış',
+      emptyTitle: 'Bir section seç',
+      emptyText: 'Tasarım künyesi bir section’a eklenir. Mevcut bir künye kartını da seçebilirsin.',
+      frameTitle: 'Section’ı seç',
+      frameText: 'Tasarım künyesi frame’e değil, sadece section’a eklenebilir. Frame’in içinde bulunduğu section’ı seç.',
+      multiTitle: 'Tek bir section seç',
+      multiText: (n) => n + ' farklı section seçili. Bir künye aynı anda sadece bir section’a ait olur.',
+      inSection: (s) => '“' + s + '” section’ında',
+      noSpec: 'Henüz künye yok', status: 'Durum', wip: 'Devam ediyor', review: 'İncelemede', ready: 'Dev’e hazır',
+      statusLong: { wip: 'Work in progress', review: 'In review', ready: 'Ready for development' },
+      owners: 'Sorumlular', design: 'Design', dev: 'Development', product: 'Product',
+      forget: 'Önerilerden kaldır',
+      jira: 'Jira linkleri', slack: 'Slack thread’leri', addJira: '+ Jira linki ekle', addSlack: '+ Slack thread’i ekle',
+      notes: 'Notlar', notesPh: 'Developer’ların (ve Claude’un) bilmesi gerekenler: davranış, etkileşimler, kurallar, edge case’ler, kararlar…',
+      create: 'Künye ekle', save: 'Değişiklikleri kaydet', remove: 'Kaldır',
+      removeTitle: 'Bu künye kaldırılsın mı?', removeText: 'Canvas’taki kart ve kayıtlı künye verisi silinecek. Figma’da ⌘Z / Ctrl+Z ile geri alabilirsin.',
+      cancel: 'Vazgeç',
+      lastUpdated: 'Son güncelleme: ', notSaved: 'Henüz kaydedilmedi', unsaved: 'Kaydedilmemiş değişiklikler',
+      staleTitle: 'Kaydedilmemiş değişiklikler',
+      staleText: (n) => '“' + n + '” section’ından kaydetmeden çıktın. Geri dönebilir ya da değişiklikleri atabilirsin. Buradan kaydedersen yine “' + n + '” için kaydedilir.',
+      goBack: (n) => '“' + n + '” section’ına dön',
+      discard: 'Değişiklikleri at',
+      ovHint: 'Bulunduğun sayfadaki künyeler bu sekmeyi her açtığında yenilenir. Diğer sayfalar bilinen son durumu gösterir.',
+      scanAll: 'Tüm sayfaları tara', scanning: 'Taranıyor…', all: 'Tümü', current: 'bu sayfa',
+      ovEmpty: 'Bu dosyada henüz künye yok.', ovEmptyFilter: 'Bu durumda künye yok.'
+    }
+  };
+
+  const ICON_SECTION = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M2 5.5V4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1v1.5M2 5.5h12V12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V5.5z"/></svg>';
+  const EMOJI = { wip: '🚧', review: '👀', ready: '✅' }; // same as the section name suffix
+  const t = () => S[lang];
+  let lastState = { status: 'none' };
+  let overview = null;
+  let filter = 'all';
+
+  // The form being edited. `editing` is the target it belongs to; it stays put while there are
+  // unsaved changes, even if the selection moves elsewhere.
+  let form = null;
+  let editing = null; // { id, name, hasSpec, spec }
+  let dirty = false;
+  let saving = false;
+
+  // ---------- People suggestions ----------
+  // Figma only tells plugins who has the file open right now, so the team roster lives in
+  // team.json in the GitHub repo. It is merged with the people the plugin finds in the file.
+  const TEAM_URL = RAW + 'team.json';
+  let team = [];       // names from team.json
+  let filePeople = []; // [{ name, removable }] from code.js
+
+  // team.json is a plain list of names: ["Name Surname", …]. The older per-role object
+  // ({ design: [], development: [], product: [] }) is still read, flattened.
+  async function loadTeam() {
+    try {
+      const res = await fetch(TEAM_URL + '?t=' + Date.now(), { cache: 'no-store' });
+      if (!res.ok) return;
+      const j = await res.json();
+      const raw = Array.isArray(j) ? j : [].concat(j.design || [], j.development || j.dev || [], j.product || []);
+      team = raw.filter((n) => typeof n === 'string' && n.trim()).map((n) => n.trim());
+      renderPeople();
+    } catch (e) {} // suggestions are a convenience, the tool works without them
+  }
+
+  // Every owner field gets the same suggestions; any name can go in any field.
+  // Names from team.json can't be removed here (edit the file in the repo instead).
+  function suggestions() {
+    const names = [];
+    team.concat(filePeople.map((p) => p.name)).forEach((n) => { if (names.indexOf(n) === -1) names.push(n); });
+    const removable = (n) => team.indexOf(n) === -1 && filePeople.some((p) => p.name === n && p.removable);
+    return names.sort((a, b) => a.localeCompare(b, 'tr')).map((name) => ({ name, removable: removable(name) }));
+  }
+
+  function renderPeople() {
+    if (suggest.input) showSuggest(suggest.input, suggest.role, suggest.box, suggest.commit);
+  }
+
+  // ---------- Suggestion dropdown ----------
+  // A custom list instead of <datalist>, so each name can have a remove button.
+  const suggest = { input: null, role: null, box: null, commit: null, items: [], active: -1 };
+
+  function hideSuggest() {
+    suggest.input = null;
+    suggest.active = -1;
+    $('suggest').classList.remove('show');
+  }
+
+  function showSuggest(input, role, box, commit) {
+    Object.assign(suggest, { input, role, box, commit });
+    const q = input.value.trim().toLocaleLowerCase('tr');
+    suggest.items = suggestions()
+      .filter((p) => form.owners[role].indexOf(p.name) === -1)
+      .filter((p) => !q || p.name.toLocaleLowerCase('tr').indexOf(q) !== -1);
+    if (suggest.active >= suggest.items.length) suggest.active = suggest.items.length - 1;
+    const el = $('suggest');
+    const scroll = el.classList.contains('show') ? el.scrollTop : 0; // keep the position when re-rendering
+    el.innerHTML = '';
+    if (!suggest.items.length) return el.classList.remove('show');
+    suggest.items.forEach((p, i) => {
+      const row = document.createElement('div');
+      row.className = 'sg-item' + (i === suggest.active ? ' on' : '');
+      const name = document.createElement('span');
+      name.textContent = p.name;
+      row.append(name);
+      // mousedown + preventDefault keeps focus in the input, so blur doesn't close the list first.
+      row.onmousedown = (e) => { e.preventDefault(); input.value = p.name; commit(true); };
+      if (p.removable) {
+        const x = document.createElement('button');
+        x.innerHTML = X;
+        x.title = t().forget;
+        x.onmousedown = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          filePeople = filePeople.filter((f) => f.name !== p.name);
+          send({ f: 'readme', type: 'forgetPerson', name: p.name });
+          showSuggest(input, role, box, commit);
+        };
+        row.append(x);
+      }
+      el.append(row);
+    });
+    const r = box.getBoundingClientRect();
+    el.style.left = r.left + 'px';
+    el.style.width = r.width + 'px';
+    el.classList.add('show');
+    // The list scrolls; it opens on whichever side of the field has more room.
+    el.style.maxHeight = '';
+    const below = window.innerHeight - r.bottom - 12;
+    const above = r.top - 12;
+    const up = el.scrollHeight > below && above > below;
+    el.style.maxHeight = Math.min(240, up ? above : below) + 'px';
+    el.style.top = (up ? r.top - el.offsetHeight - 4 : r.bottom + 4) + 'px';
+    el.scrollTop = scroll;
+    const activeItem = el.querySelector('.sg-item.on');
+    if (activeItem) activeItem.scrollIntoView({ block: 'nearest' });
+  }
+
+  function emptyForm(me) {
+    return {
+      status: 'wip',
+      owners: { design: me ? [me] : [], dev: [], product: [] }, jira: [], slack: [], notes: ''
+    };
+  }
+  function formFromSpec(s) {
+    return {
+      status: s.status,
+      owners: { design: s.owners.design.slice(), dev: s.owners.dev.slice(), product: s.owners.product.slice() },
+      jira: s.jira.slice(), slack: s.slack.slice(), notes: s.notes
+    };
+  }
+
+  function markDirty() {
+    if (!dirty) { dirty = true; renderFooter(); }
+  }
+
+  // ---------- Form rendering ----------
+
+  function renderStatus() {
+    root.querySelectorAll('#rm-statusSeg button').forEach((b) => b.classList.toggle('on', b.dataset.status === form.status));
+  }
+
+  function renderChips() {
+    root.querySelectorAll('.chips').forEach((box) => {
+      const role = box.dataset.role;
+      const keepFocus = box.contains(document.activeElement);
+      box.innerHTML = '';
+      form.owners[role].forEach((name, i) => {
+        const c = document.createElement('span');
+        c.className = 'chip';
+        const label = document.createElement('span');
+        label.textContent = name;
+        c.append(label);
+        const x = document.createElement('button');
+        x.innerHTML = X;
+        x.onclick = (e) => { e.stopPropagation(); form.owners[role].splice(i, 1); markDirty(); renderChips(); };
+        c.append(x);
+        box.append(c);
+      });
+      const input = document.createElement('input');
+      const commit = (refocus) => {
+        const v = input.value.trim().replace(/,$/, '').trim();
+        if (v && form.owners[role].indexOf(v) === -1) { form.owners[role].push(v); markDirty(); }
+        input.value = '';
+        renderChips();
+        if (refocus) box.querySelector('input').focus();
+      };
+      input.onkeydown = (e) => {
+        const open = suggest.input === input && suggest.items.length;
+        if (open && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+          e.preventDefault();
+          const n = suggest.items.length;
+          suggest.active = e.key === 'ArrowDown' ? (suggest.active + 1) % n : (suggest.active - 1 + n) % n;
+          showSuggest(input, role, box, commit);
+        } else if (e.key === 'Escape' && open) {
+          e.preventDefault();
+          hideSuggest();
+        } else if (e.key === 'Enter' || e.key === ',') {
+          e.preventDefault();
+          if (open && suggest.active >= 0) input.value = suggest.items[suggest.active].name;
+          commit(true);
+        }
+        else if (e.key === 'Backspace' && !input.value && form.owners[role].length) {
+          form.owners[role].pop(); markDirty(); renderChips(); box.querySelector('input').focus();
+        }
+      };
+      input.oninput = () => { suggest.active = -1; showSuggest(input, role, box, commit); };
+      input.onfocus = () => showSuggest(input, role, box, commit);
+      input.onblur = () => {
+        if (suggest.input === input) hideSuggest();
+        if (input.value.trim()) commit(false);
+      };
+      box.onclick = () => input.focus();
+      box.append(input);
+      if (keepFocus) input.focus();
+    });
+  }
+
+  function renderLinks(kind) {
+    const list = $(kind + 'List');
+    list.innerHTML = '';
+    form[kind].forEach((url, i) => {
+      const row = document.createElement('div');
+      row.className = 'link-row';
+      const input = document.createElement('input');
+      input.className = 'input';
+      input.value = url;
+      input.placeholder = kind === 'jira' ? 'https://yourteam.atlassian.net/browse/…' : 'https://yourteam.slack.com/archives/…';
+      input.oninput = () => { form[kind][i] = input.value; markDirty(); };
+      const x = document.createElement('button');
+      x.className = 'icon-btn';
+      x.innerHTML = X;
+      x.onclick = () => { form[kind].splice(i, 1); markDirty(); renderLinks(kind); };
+      row.append(input, x);
+      list.append(row);
+    });
+  }
+
+  function renderForm() {
+    renderStatus();
+    renderChips();
+    renderLinks('jira');
+    renderLinks('slack');
+    $('notes').value = form.notes;
+  }
+
+  function renderFooter() {
+    const s = editing && editing.spec;
+    $('save').textContent = editing && editing.hasSpec ? t().save : t().create;
+    $('save').disabled = saving || (editing && editing.hasSpec && !dirty);
+    $('remove').style.display = editing && editing.hasSpec ? '' : 'none';
+    $('upd').textContent = dirty ? t().unsaved
+      : s && s.at ? t().lastUpdated + (s.by ? s.by + ' · ' : '') + ago(s.at) : t().notSaved;
+  }
+
+  function renderTarget(m) {
+    $('targetIco').innerHTML = ICON_SECTION;
+    $('targetName').textContent = m.target.name;
+    $('targetSub').textContent = 'Section · ' + (m.target.section ? t().inSection(m.target.section) : m.target.page);
+    $('badge').textContent = m.spec ? t().statusLong[m.spec.status] : t().noSpec;
+  }
+
+  // Fills the form from the plugin state, unless the user is mid-edit.
+  function render(m) {
+    lastState = m;
+    const cl = root.classList;
+
+    if (dirty && editing && !(m.status === 'ok' && m.target.id === editing.id)) {
+      // Selection moved away while editing: keep the form bound to the original target.
+      $('staleBanner').classList.add('show');
+      $('staleText').textContent = t().staleText(editing.name);
+      $('goBack').textContent = t().goBack(editing.name);
+      return;
+    }
+    $('staleBanner').classList.remove('show');
+
+    if (m.status !== 'ok') {
+      editing = null;
+      cl.add('no-target');
+      cl.remove('has-target');
+      const key = m.status === 'multiple' ? 'multi' : m.status === 'frame' ? 'frame' : 'empty';
+      $('phTitle').textContent = t()[key + 'Title'];
+      $('phText').textContent = key === 'multi' ? t().multiText(m.count) : t()[key + 'Text'];
+      return;
+    }
+
+    cl.remove('no-target');
+    cl.add('has-target');
+    renderTarget(m);
+
+    const sameTarget = editing && editing.id === m.target.id;
+    editing = { id: m.target.id, name: m.target.name, hasSpec: !!m.spec, spec: m.spec };
+    // Don't redraw a form that is being typed into (it would reset the cursor).
+    const typing = sameTarget && document.activeElement && $('form').contains(document.activeElement);
+    if (!dirty && !typing) {
+      form = m.spec ? formFromSpec(m.spec) : emptyForm(m.me);
+      renderForm();
+    }
+
+    renderFooter();
+  }
+
+  function collect() {
+    return {
+      status: form.status,
+      owners: form.owners,
+      jira: form.jira,
+      slack: form.slack,
+      notes: $('notes').value
+    };
+  }
+
+  function save() {
+    if (!editing || saving) return;
+    saving = true;
+    renderFooter();
+    send({ f: 'readme', type: 'save', id: editing.id, spec: collect() });
+  }
+
+  // ---------- Overview ----------
+
+  function renderOverview() {
+    if (!overview) return;
+    const entries = overview.entries.slice().sort((a, b) => (b.at || 0) - (a.at || 0));
+    const count = (s) => entries.filter((e) => s === 'all' || e.status === s).length;
+    $('counts').innerHTML = '';
+    ['all', 'wip', 'review', 'ready'].forEach((s) => {
+      const b = document.createElement('button');
+      b.className = filter === s ? 'on' : '';
+      b.innerHTML = (s === 'all' ? '' : '<span class="emoji">' + EMOJI[s] + '</span>') + '<span></span><b></b>';
+      b.querySelector('span:not(.emoji)').textContent = s === 'all' ? t().all : t()[s];
+      b.querySelector('b').textContent = count(s);
+      b.onclick = () => { filter = s; renderOverview(); };
+      $('counts').append(b);
+    });
+
+    const list = $('ovList');
+    list.innerHTML = '';
+    const shown = entries.filter((e) => filter === 'all' || e.status === filter);
+    if (!shown.length) {
+      const d = document.createElement('div');
+      d.className = 'ov-empty';
+      d.textContent = entries.length ? t().ovEmptyFilter : t().ovEmpty;
+      list.append(d);
+      return;
+    }
+    // Current page first, then the rest alphabetically.
+    const pages = [];
+    shown.forEach((e) => { if (pages.indexOf(e.pageId) === -1) pages.push(e.pageId); });
+    const pageName = (id) => (shown.find((e) => e.pageId === id) || {}).pageName || '';
+    pages.sort((a, b) => (a === overview.currentPageId ? -1 : b === overview.currentPageId ? 1 : pageName(a).localeCompare(pageName(b))));
+    pages.forEach((pid) => {
+      const h = document.createElement('div');
+      h.className = 'page-name';
+      h.textContent = pageName(pid);
+      if (pid === overview.currentPageId) {
+        const small = document.createElement('small');
+        small.textContent = ' · ' + t().current;
+        h.append(small);
+      }
+      list.append(h);
+      shown.filter((e) => e.pageId === pid).forEach((e) => {
+        const b = document.createElement('button');
+        b.className = 'entry';
+        b.innerHTML = '<span class="emoji">' + (EMOJI[e.status] || '') + '</span><div class="meta"><div class="name"></div><div class="sub"></div></div>';
+        b.querySelector('.name').textContent = e.name;
+        b.querySelector('.sub').textContent = t().statusLong[e.status] + (e.at ? ' · ' + (e.by ? e.by + ' · ' : '') + ago(e.at) : '');
+        b.onclick = () => { send({ f: 'readme', type: 'goto', id: e.id }); setView('spec'); };
+        list.append(b);
+      });
+    });
+  }
+
+  function setView(v) {
+    root.classList.toggle('view-spec', v === 'spec');
+    root.classList.toggle('view-overview', v === 'overview');
+    root.querySelectorAll('.tabs button').forEach((b) => b.classList.toggle('on', b.dataset.view === v));
+    if (v === 'overview') send({ f: 'readme', type: 'overview' });
+  }
+
+  function applyLang() {
+    translate(root, t());
+    render(lastState);
+    renderFooter();
+    renderOverview();
+  }
+
+  function onMessage(m) {
+    if (m.type === 'state') {
+      // While saving, keep the form as it is; the state that follows 'saved' fills it in.
+      if (saving) { lastState = m; return; }
+      render(m);
+    } else if (m.type === 'saved') {
+      saving = false;
+      dirty = false;
+    } else if (m.type === 'people') {
+      filePeople = m.people || [];
+      renderPeople();
+    } else if (m.type === 'overview') {
+      overview = m;
+      $('scanAll').textContent = t().scanAll;
+      $('scanAll').disabled = false;
+      renderOverview();
+    } else if (m.type === 'error') {
+      saving = false;
+      $('scanAll').textContent = t().scanAll;
+      $('scanAll').disabled = false;
+      renderFooter();
+    }
+  }
+
+  // ---------- Events ----------
+
+  root.querySelectorAll('.tabs button').forEach((b) => { b.onclick = () => setView(b.dataset.view); });
+  root.querySelectorAll('#rm-statusSeg button').forEach((b) => {
+    b.onclick = () => { form.status = b.dataset.status; markDirty(); renderStatus(); };
+  });
+  root.querySelectorAll('[data-add]').forEach((b) => {
+    b.onclick = () => {
+      const kind = b.dataset.add;
+      form[kind].push('');
+      markDirty();
+      renderLinks(kind);
+      const inputs = $(kind + 'List').querySelectorAll('input');
+      inputs[inputs.length - 1].focus();
+    };
+  });
+  root.querySelector('main').addEventListener('scroll', () => { if (suggest.input) suggest.input.blur(); });
+  $('notes').oninput = () => { form.notes = $('notes').value; markDirty(); };
+  $('save').onclick = save;
+  $('goBack').onclick = () => { if (editing) send({ f: 'readme', type: 'goto', id: editing.id }); };
+  $('discard').onclick = () => { dirty = false; editing = null; render(lastState); send({ f: 'readme', type: 'refresh' }); };
+  $('remove').onclick = () => $('confirm').classList.add('show');
+  $('cancelRemove').onclick = () => $('confirm').classList.remove('show');
+  $('confirmRemove').onclick = () => {
+    $('confirm').classList.remove('show');
+    if (editing) { dirty = false; send({ f: 'readme', type: 'remove', id: editing.id }); }
+  };
+  $('scanAll').onclick = () => {
+    $('scanAll').textContent = t().scanning;
+    $('scanAll').disabled = true;
+    send({ f: 'readme', type: 'scanAll' });
+  };
+
+  form = emptyForm(null);
+  loadTeam();
+
+  // Light sync so changes made by other designers show up.
+  setInterval(() => { if (screen === 'readme' && !dirty && !saving) send({ f: 'readme', type: 'refresh' }); }, 3000);
+
+  return { applyLang, onMessage, save, onLeave: hideSuggest };
+})();
+
+// =====================================================================================
+// Frame Note
+// =====================================================================================
+
+const Note = (() => {
+  const root = document.getElementById('s-note');
+  const $ = (id) => document.getElementById('nt-' + id);
+
+  const S = {
+    en: {
+      back: 'Back', appTitle: 'Frame Note',
+      tabNote: 'Note', tabOverview: 'Overview',
+      emptyTitle: 'Select a frame',
+      emptyText: 'A note attaches to a frame inside a section. You can also select an existing note card.',
+      sectionTitle: 'Select a frame',
+      sectionText: 'Notes are added to frames, not sections. Select one or more frames inside this section.',
+      outsideTitle: 'Frame isn’t in a section',
+      outsideText: 'Notes can only be added to frames that sit directly in a section. Move the frame into a section first.',
+      orphanTitle: 'This note’s frame was deleted',
+      orphanText: (n) => 'The card was attached to “' + n + '”, which no longer exists.',
+      deleteNote: 'Delete note card',
+      inSection: (s) => 'in section “' + s + '”',
+      noNote: 'No note yet', count: (n) => n + (n === 1 ? ' note' : ' notes'),
+      notes: 'Notes', addPara: '+ Add note',
+      parasHint: 'Each note becomes a paragraph on the card below the frame, with your name and the date. Empty notes are dropped.',
+      notePh: 'Anything developers (and Claude) should know about this frame: behaviour, interactions, rules, edge cases…',
+      newPara: 'New', you: 'you',
+      overlapTitle: 'The note overlaps other layers',
+      overlapText: (names) => 'It covers “' + names[0] + '”' + (names.length > 1 ? ' and ' + (names.length - 1) + ' more' : '') + '. Make some room below the frame.',
+      multiName: (n) => n + ' frames selected', multiSub: 'The note is added to each of them',
+      outsideMulti: (n) => n + (n === 1 ? ' selected frame isn’t' : ' selected frames aren’t') + ' in a section and will be skipped.',
+      addAllLbl: 'Add a note to all', addAllHint: 'Added as a new paragraph; existing notes stay as they are.',
+      addAll: (n) => 'Add to ' + n + ' frames',
+      create: 'Add note', save: 'Save changes', remove: 'Remove',
+      removeTitle: 'Remove this note?', removeText: 'All paragraphs and the card on the canvas will be deleted. You can undo with ⌘Z / Ctrl+Z in Figma.',
+      cancel: 'Cancel',
+      lastUpdated: 'Last updated: ', notSaved: 'Not saved yet', unsaved: 'Unsaved changes',
+      staleTitle: 'Unsaved changes',
+      staleText: (n) => 'You left “' + n + '” without saving. Go back to it, or discard the changes. Saving here still writes to “' + n + '”.',
+      goBack: (n) => 'Go back to “' + n + '”',
+      discard: 'Discard changes',
+      ovCounts: (f, n) => '<b>' + f + '</b> ' + (f === 1 ? 'frame' : 'frames') + ' · <b>' + n + '</b> ' + (n === 1 ? 'note' : 'notes'),
+      ovHint: 'Notes on the current page are refreshed every time you open this tab. Other pages show their last known state.',
+      orphans: 'Frame deleted', orphanSub: 'Card left behind on this page',
+      scanAll: 'Scan all pages', scanning: 'Scanning…', current: 'current page',
+      ovEmpty: 'No notes in this file yet.',
+      removePara: 'Remove this note'
+    },
+    tr: {
+      back: 'Geri', appTitle: 'Frame Notu',
+      tabNote: 'Not', tabOverview: 'Genel bakış',
+      emptyTitle: 'Bir frame seç',
+      emptyText: 'Not, bir section içindeki frame’e eklenir. Mevcut bir not kartını da seçebilirsin.',
+      sectionTitle: 'Bir frame seç',
+      sectionText: 'Notlar section’a değil frame’e eklenir. Bu section içinden bir veya birkaç frame seç.',
+      outsideTitle: 'Frame bir section içinde değil',
+      outsideText: 'Not sadece doğrudan bir section içinde duran frame’lere eklenebilir. Önce frame’i bir section’a taşı.',
+      orphanTitle: 'Bu notun frame’i silinmiş',
+      orphanText: (n) => 'Kart “' + n + '” frame’ine aitti, o frame artık yok.',
+      deleteNote: 'Not kartını sil',
+      inSection: (s) => '“' + s + '” section’ında',
+      noNote: 'Henüz not yok', count: (n) => n + ' not',
+      notes: 'Notlar', addPara: '+ Not ekle',
+      parasHint: 'Her not, frame’in altındaki kartta adın ve tarihle birlikte ayrı bir paragraf olur. Boş notlar kaydedilmez.',
+      notePh: 'Developer’ların (ve Claude’un) bu frame hakkında bilmesi gerekenler: davranış, etkileşimler, kurallar, edge case’ler…',
+      newPara: 'Yeni', you: 'sen',
+      overlapTitle: 'Not başka katmanlarla çakışıyor',
+      overlapText: (names) => '“' + names[0] + '”' + (names.length > 1 ? ' ve ' + (names.length - 1) + ' katman daha' : '') + ' notun altında kalıyor. Frame’in altında yer aç.',
+      multiName: (n) => n + ' frame seçili', multiSub: 'Not her birine eklenir',
+      outsideMulti: (n) => 'Seçili ' + n + ' frame bir section içinde değil, bunlar atlanacak.',
+      addAllLbl: 'Hepsine not ekle', addAllHint: 'Yeni bir paragraf olarak eklenir; mevcut notlar olduğu gibi kalır.',
+      addAll: (n) => n + ' frame’e ekle',
+      create: 'Not ekle', save: 'Değişiklikleri kaydet', remove: 'Kaldır',
+      removeTitle: 'Bu not kaldırılsın mı?', removeText: 'Tüm paragraflar ve canvas’taki kart silinecek. Figma’da ⌘Z / Ctrl+Z ile geri alabilirsin.',
+      cancel: 'Vazgeç',
+      lastUpdated: 'Son güncelleme: ', notSaved: 'Henüz kaydedilmedi', unsaved: 'Kaydedilmemiş değişiklikler',
+      staleTitle: 'Kaydedilmemiş değişiklikler',
+      staleText: (n) => '“' + n + '” frame’inden kaydetmeden çıktın. Geri dönebilir ya da değişiklikleri atabilirsin. Buradan kaydedersen yine “' + n + '” için kaydedilir.',
+      goBack: (n) => '“' + n + '” frame’ine dön',
+      discard: 'Değişiklikleri at',
+      ovCounts: (f, n) => '<b>' + f + '</b> frame · <b>' + n + '</b> not',
+      ovHint: 'Bulunduğun sayfadaki notlar bu sekmeyi her açtığında yenilenir. Diğer sayfalar bilinen son durumu gösterir.',
+      orphans: 'Frame’i silinmiş', orphanSub: 'Bu sayfada sahipsiz kalan kart',
+      scanAll: 'Tüm sayfaları tara', scanning: 'Taranıyor…', current: 'bu sayfa',
+      ovEmpty: 'Bu dosyada henüz not yok.',
+      removePara: 'Bu notu kaldır'
+    }
+  };
+
+  const ICONS = {
+    Frame: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M5 2v12M11 2v12M2 5h12M2 11h12"/></svg>',
+    Frames: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><rect x="2" y="2" width="8" height="8" rx="1"/><path d="M6 13h7a1 1 0 0 0 1-1V5"/></svg>',
+    Warn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v5M12 16.5v.01M10.3 3.9L2.4 17.5A2 2 0 0 0 4.1 20.5h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>'
+  };
+
+  const t = () => S[lang];
+  let lastState = { status: 'none' };
+  let overview = null;
+
+  // The form being edited. `editing` is the frame it belongs to; it stays put while there are
+  // unsaved changes, even if the selection moves elsewhere.
+  let form = null;    // { paras: [{ id, text, by, at }] } — id/by/at are null for new paragraphs
+  let editing = null; // { id, name, hasNote, note }
+  let multi = null;   // { ids } while several frames are selected
+  let dirty = false;
+  let saving = false;
+  let me = null;
+
+  function markDirty() {
+    if (!dirty) { dirty = true; renderFooter(); }
+  }
+
+  function grow(ta) {
+    ta.style.height = 'auto';
+    ta.style.height = Math.max(72, ta.scrollHeight + 2) + 'px';
+  }
+
+  // ---------- Single frame ----------
+
+  function formFromNote(note) {
+    return { paras: note ? note.entries.map((e) => ({ id: e.id, text: e.text, by: e.by, at: e.at })) : [{ id: null, text: '', by: null, at: null }] };
+  }
+
+  function renderParas(focusIndex) {
+    const list = $('paras');
+    list.innerHTML = '';
+    form.paras.forEach((p, i) => {
+      const box = document.createElement('div');
+      box.className = 'para';
+      const ta = document.createElement('textarea');
+      ta.value = p.text;
+      ta.placeholder = t().notePh;
+      ta.oninput = () => { p.text = ta.value; grow(ta); markDirty(); };
+      const meta = document.createElement('div');
+      meta.className = 'para-meta';
+      const info = document.createElement('span');
+      const num = document.createElement('span');
+      num.className = 'num';
+      num.textContent = '#' + (i + 1);
+      info.append(num, document.createTextNode(p.by ? p.by + ' · ' + ago(p.at) : t().newPara + ' · ' + (me || t().you)));
+      const x = document.createElement('button');
+      x.className = 'icon-btn danger';
+      x.innerHTML = X;
+      x.title = t().removePara;
+      x.onclick = () => {
+        form.paras.splice(i, 1);
+        if (!form.paras.length) form.paras.push({ id: null, text: '', by: null, at: null });
+        markDirty();
+        renderParas();
+      };
+      meta.append(info, x);
+      box.append(ta, meta);
+      list.append(box);
+      grow(ta);
+      if (i === focusIndex) ta.focus();
+    });
+  }
+
+  function hasText() {
+    return form && form.paras.some((p) => p.text.trim());
+  }
+
+  function renderFooter() {
+    if (multi) {
+      $('save').textContent = t().addAll(multi.ids.length);
+      $('save').disabled = saving || !multi.ids.length || !$('bulk').value.trim();
+      $('remove').style.display = 'none';
+      $('upd').textContent = '';
+      return;
+    }
+    const n = editing && editing.note;
+    $('save').textContent = editing && editing.hasNote ? t().save : t().create;
+    $('save').disabled = saving || !editing || (editing.hasNote ? !dirty : !hasText());
+    $('remove').style.display = editing && editing.hasNote ? '' : 'none';
+    let last = null;
+    if (n) n.entries.forEach((e) => { if (!last || e.at > last.at) last = e; });
+    $('upd').textContent = dirty ? t().unsaved
+      : last ? t().lastUpdated + last.by + ' · ' + ago(last.at) : t().notSaved;
+  }
+
+  function showPlaceholder(key, m) {
+    const ph = $('placeholder');
+    ph.className = 'placeholder' + (key === 'outside' || key === 'orphan' ? ' warn' : '') + (key === 'orphan' ? ' orphan' : '');
+    $('phIco').innerHTML = key === 'outside' || key === 'orphan' ? ICONS.Warn : POINTER;
+    $('phTitle').textContent = t()[key + 'Title'];
+    $('phText').textContent = key === 'orphan' ? t().orphanText(m.orphan.name) : t()[key + 'Text'];
+  }
+
+  function setMode(mode) {
+    const cl = root.classList;
+    cl.toggle('no-target', mode === 'none');
+    cl.toggle('has-target', mode === 'single');
+    cl.toggle('multi-target', mode === 'multi');
+  }
+
+  // Fills the form from the plugin state, unless the user is mid-edit.
+  function render(m) {
+    lastState = m;
+
+    if (dirty && editing && !(m.status === 'ok' && m.target.id === editing.id)) {
+      // Selection moved away while editing: keep the form bound to the original frame.
+      $('staleBanner').classList.add('show');
+      $('staleText').textContent = t().staleText(editing.name);
+      $('goBack').textContent = t().goBack(editing.name);
+      return;
+    }
+    $('staleBanner').classList.remove('show');
+
+    if (m.status === 'multiple') {
+      editing = null;
+      multi = { ids: m.frames.map((f) => f.id) };
+      setMode('multi');
+      renderMulti(m);
+      return renderFooter();
+    }
+    multi = null;
+
+    if (m.status !== 'ok') {
+      editing = null;
+      setMode('none');
+      showPlaceholder(m.status === 'outside' ? 'outside' : m.status === 'orphan' ? 'orphan' : m.status === 'section' ? 'section' : 'empty', m);
+      return;
+    }
+
+    setMode('single');
+    me = m.me || me;
+    $('targetIco').innerHTML = ICONS.Frame;
+    $('targetName').textContent = m.target.name;
+    $('targetSub').textContent = 'Frame · ' + t().inSection(m.target.section);
+    $('badge').textContent = m.note ? t().count(m.note.entries.length) : t().noNote;
+    $('overlapBanner').classList.toggle('show', !!(m.overlaps && m.overlaps.length));
+    if (m.overlaps && m.overlaps.length) $('overlapText').textContent = t().overlapText(m.overlaps);
+
+    const sameTarget = editing && editing.id === m.target.id;
+    editing = { id: m.target.id, name: m.target.name, hasNote: !!m.note, note: m.note };
+    // Don't redraw a form that is being typed into (it would reset the cursor).
+    const typing = sameTarget && document.activeElement && $('form').contains(document.activeElement);
+    if (!dirty && !typing) {
+      form = formFromNote(m.note);
+      renderParas();
+    }
+    renderFooter();
+  }
+
+  // ---------- Multiple frames ----------
+
+  function renderMulti(m) {
+    $('multiIco').innerHTML = ICONS.Frames;
+    $('multiName').textContent = t().multiName(m.frames.length);
+    $('outsideBanner').classList.toggle('show', m.outside > 0);
+    $('outsideText').textContent = t().outsideMulti(m.outside);
+    const list = $('frameList');
+    list.innerHTML = '';
+    m.frames.forEach((f) => {
+      const row = document.createElement('div');
+      row.className = 'frame-row';
+      const name = document.createElement('span');
+      name.className = 'name';
+      name.textContent = f.name;
+      const count = document.createElement('span');
+      count.className = 'count';
+      count.textContent = f.count ? t().count(f.count) : t().noNote;
+      row.append(name, count);
+      list.append(row);
+    });
+  }
+
+  // ---------- Saving ----------
+
+  function save() {
+    if (saving || $('save').disabled) return;
+    if (multi) {
+      saving = true;
+      renderFooter();
+      return send({ f: 'note', type: 'addToAll', ids: multi.ids, text: $('bulk').value });
+    }
+    if (!editing) return;
+    saving = true;
+    renderFooter();
+    send({ f: 'note', type: 'save', id: editing.id, entries: form.paras.map((p) => ({ id: p.id, text: p.text })) });
+  }
+
+  // ---------- Overview ----------
+
+  function renderOverview() {
+    if (!overview) return;
+    const entries = overview.entries.slice().sort((a, b) => (b.at || 0) - (a.at || 0));
+    const total = entries.reduce((n, e) => n + (e.count || 0), 0);
+    $('counts').innerHTML = t().ovCounts(entries.length, total);
+
+    const list = $('ovList');
+    list.innerHTML = '';
+    if (!entries.length && !overview.orphans.length) {
+      const d = document.createElement('div');
+      d.className = 'ov-empty';
+      d.textContent = t().ovEmpty;
+      list.append(d);
+      return;
+    }
+
+    if (overview.orphans.length) {
+      const h = document.createElement('div');
+      h.className = 'page-name';
+      h.textContent = t().orphans;
+      list.append(h);
+      overview.orphans.forEach((o) => {
+        const row = document.createElement('div');
+        row.className = 'entry orphan';
+        row.innerHTML = '<span class="dot"></span><div class="meta"><div class="name"></div><div class="sub"></div></div>';
+        row.querySelector('.name').textContent = o.name;
+        row.querySelector('.sub').textContent = t().orphanSub;
+        const del = document.createElement('button');
+        del.className = 'btn small';
+        del.textContent = t().deleteNote;
+        del.onclick = () => send({ f: 'note', type: 'deleteOrphan', id: o.id });
+        row.append(del);
+        list.append(row);
+      });
+    }
+
+    // Current page first, then the rest alphabetically.
+    const pages = [];
+    entries.forEach((e) => { if (pages.indexOf(e.pageId) === -1) pages.push(e.pageId); });
+    const pageName = (id) => (entries.find((e) => e.pageId === id) || {}).pageName || '';
+    pages.sort((a, b) => (a === overview.currentPageId ? -1 : b === overview.currentPageId ? 1 : pageName(a).localeCompare(pageName(b))));
+    pages.forEach((pid) => {
+      const h = document.createElement('div');
+      h.className = 'page-name';
+      h.textContent = pageName(pid);
+      if (pid === overview.currentPageId) {
+        const small = document.createElement('small');
+        small.textContent = ' · ' + t().current;
+        h.append(small);
+      }
+      list.append(h);
+      entries.filter((e) => e.pageId === pid).forEach((e) => {
+        const b = document.createElement('button');
+        b.className = 'entry';
+        b.innerHTML = '<span class="dot"></span><div class="meta"><div class="name"></div><div class="sub"></div><div class="preview"></div></div>';
+        b.querySelector('.name').textContent = e.name;
+        b.querySelector('.sub').textContent = (e.section ? e.section + ' · ' : '') + t().count(e.count) +
+          (e.at ? ' · ' + e.by + ' · ' + ago(e.at) : '');
+        b.querySelector('.preview').textContent = e.preview || '';
+        b.onclick = () => { send({ f: 'note', type: 'goto', id: e.id }); setView('note'); };
+        list.append(b);
+      });
+    });
+  }
+
+  function setView(v) {
+    root.classList.toggle('view-note', v === 'note');
+    root.classList.toggle('view-overview', v === 'overview');
+    root.querySelectorAll('.tabs button').forEach((b) => b.classList.toggle('on', b.dataset.view === v));
+    if (v === 'overview') send({ f: 'note', type: 'overview' });
+  }
+
+  function applyLang() {
+    translate(root, t());
+    render(lastState);
+    if (form && root.classList.contains('has-target')) renderParas();
+    renderFooter();
+    renderOverview();
+  }
+
+  function onMessage(m) {
+    if (m.type === 'state') {
+      // While saving, keep the form as it is; the state that follows 'saved' fills it in.
+      if (saving) { lastState = m; return; }
+      render(m);
+    } else if (m.type === 'saved') {
+      saving = false;
+      dirty = false;
+      if (multi) { $('bulk').value = ''; grow($('bulk')); }
+      editing = null; // so the saved note is redrawn from the file
+    } else if (m.type === 'overview') {
+      overview = m;
+      $('scanAll').textContent = t().scanAll;
+      $('scanAll').disabled = false;
+      renderOverview();
+    } else if (m.type === 'error') {
+      saving = false;
+      $('scanAll').textContent = t().scanAll;
+      $('scanAll').disabled = false;
+      renderFooter();
+    }
+  }
+
+  // ---------- Events ----------
+
+  root.querySelectorAll('.tabs button').forEach((b) => { b.onclick = () => setView(b.dataset.view); });
+  $('addPara').onclick = () => {
+    form.paras.push({ id: null, text: '', by: null, at: null });
+    markDirty();
+    renderParas(form.paras.length - 1);
+  };
+  $('bulk').oninput = () => { grow($('bulk')); renderFooter(); };
+  $('save').onclick = save;
+  $('goBack').onclick = () => { if (editing) send({ f: 'note', type: 'goto', id: editing.id }); };
+  $('discard').onclick = () => { dirty = false; editing = null; render(lastState); send({ f: 'note', type: 'refresh' }); };
+  $('remove').onclick = () => $('confirm').classList.add('show');
+  $('cancelRemove').onclick = () => $('confirm').classList.remove('show');
+  $('confirmRemove').onclick = () => {
+    $('confirm').classList.remove('show');
+    if (editing) { dirty = false; send({ f: 'note', type: 'remove', id: editing.id }); }
+  };
+  $('deleteOrphan').onclick = () => { if (lastState.orphan) send({ f: 'note', type: 'deleteOrphan', id: lastState.orphan.id }); };
+  $('scanAll').onclick = () => {
+    $('scanAll').textContent = t().scanning;
+    $('scanAll').disabled = true;
+    send({ f: 'note', type: 'scanAll' });
+  };
+
+  form = formFromNote(null);
+
+  // Light sync so changes made by other designers show up.
+  setInterval(() => { if (screen === 'note' && !dirty && !saving) send({ f: 'note', type: 'refresh' }); }, 3000);
+
+  return { applyLang, onMessage, save };
+})();
+
+// =====================================================================================
+// Image Optimizer
+// =====================================================================================
+
+const Images = (() => {
+  const root = document.getElementById('s-images');
+  const $ = (id) => document.getElementById('io-' + id);
+
+  const S = {
+    en: {
+      back: 'Back', appTitle: 'Image Optimizer',
+      scope: 'Scope', scopeSelection: 'Selection', scopePage: 'This page', scopeDocument: 'Whole file',
+      scopeHintSel: (n) => 'Scanning “' + n + '”.',
+      scopeHintSelN: (n) => 'Scanning the ' + n + ' selected layers.',
+      scopeHintNone: 'Select a frame or section to scan only that.',
+      scopeHintPage: 'Scanning every layer on the current page.',
+      scopeHintDoc: 'Loads and scans every page. Can take a while in large files.',
+      resolution: 'Target resolution', recommended: 'Recommended', notRecommended: 'Not recommended',
+      scale2Title: '2x isn’t recommended',
+      scale2Text: 'Images can look blurry on 3x phone screens (most modern iPhones and Android flagships). Use it only if you are sure the design ships at 2x.',
+      minSize: 'File size', minSizeHint: 'Only images at least this heavy are listed. Only the pixel size changes; PNGs stay PNG, JPEGs stay JPEG.',
+      scan: 'Scan', scanning: 'Scanning…',
+      scanProgress: (n, tot) => n + ' / ' + tot + ' layers scanned…',
+      applyProgress: (n, tot) => n + ' / ' + tot + ' images optimized…',
+      counts: (n) => '<b>' + n + '</b> ' + (n === 1 ? 'result' : 'results'),
+      countsGain: (gn) => ' · estimated saving <b class="gain">' + gn + '</b>',
+      selectAll: 'Select all', selectNone: 'Clear',
+      uses: (n) => n + (n === 1 ? ' use' : ' uses'),
+      useOf: (i, n) => 'use ' + i + ' of ' + n,
+      goTo: 'Go to layer', goToNext: 'Click again for the next use',
+      noGain: 'No saving',
+      empty: 'Nothing to optimize 🎉',
+      emptyHint: 'Try a lower file size threshold or a wider scope.',
+      selInfo: (n, gn) => n + ' selected · ~' + gn + ' saving',
+      apply: (n) => 'Optimize ' + n + (n === 1 ? ' image' : ' images'),
+      applying: 'Optimizing…',
+      doneTitle: (n, saved) => n + (n === 1 ? ' image' : ' images') + ' optimized, ' + saved + ' saved',
+      doneSkipped: (n) => n + ' skipped (resizing didn’t make them smaller). ',
+      doneFailed: (n) => n + ' layers couldn’t be edited (probably library components). ',
+      doneUndo: 'Undo with ⌘Z / Ctrl+Z. Scan again to check.',
+      errTitle: 'Something went wrong'
+    },
+    tr: {
+      back: 'Geri', appTitle: 'Image Optimizer',
+      scope: 'Kapsam', scopeSelection: 'Seçim', scopePage: 'Bu sayfa', scopeDocument: 'Tüm dosya',
+      scopeHintSel: (n) => '“' + n + '” taranacak.',
+      scopeHintSelN: (n) => 'Seçili ' + n + ' katman taranacak.',
+      scopeHintNone: 'Sadece onu taramak için bir frame veya section seç.',
+      scopeHintPage: 'Bu sayfadaki tüm katmanlar taranacak.',
+      scopeHintDoc: 'Tüm sayfaları yükleyip tarar. Büyük dosyalarda biraz sürebilir.',
+      resolution: 'Hedef çözünürlük', recommended: 'Önerilen', notRecommended: 'Önerilmez',
+      scale2Title: '2x önerilmez',
+      scale2Text: 'Görseller 3x telefon ekranlarında (çoğu güncel iPhone ve üst segment Android) bulanık görünebilir. Sadece tasarımın 2x’te kullanılacağından eminsen seç.',
+      minSize: 'Dosya boyutu', minSizeHint: 'Sadece en az bu boyuttaki görseller listelenir. Yalnızca piksel boyutu değişir; PNG’ler PNG, JPEG’ler JPEG kalır.',
+      scan: 'Tara', scanning: 'Taranıyor…',
+      scanProgress: (n, tot) => n + ' / ' + tot + ' katman tarandı…',
+      applyProgress: (n, tot) => n + ' / ' + tot + ' görsel optimize edildi…',
+      counts: (n) => '<b>' + n + '</b> sonuç',
+      countsGain: (gn) => ' · tahmini kazanç <b class="gain">' + gn + '</b>',
+      selectAll: 'Tümünü seç', selectNone: 'Temizle',
+      uses: (n) => n + ' kullanım',
+      useOf: (i, n) => n + ' kullanımdan ' + i + '.',
+      goTo: 'Katmana git', goToNext: 'Sonraki kullanım için tekrar tıkla',
+      noGain: 'Kazanç yok',
+      empty: 'Optimize edilecek görsel yok 🎉',
+      emptyHint: 'Daha düşük bir dosya boyutu eşiği ya da daha geniş bir kapsam dene.',
+      selInfo: (n, gn) => n + ' seçili · ~' + gn + ' kazanç',
+      apply: (n) => n + ' görseli optimize et',
+      applying: 'Optimize ediliyor…',
+      doneTitle: (n, saved) => n + ' görsel optimize edildi, ' + saved + ' kazanıldı',
+      doneSkipped: (n) => n + ' görsel atlandı (küçültmek boyutu düşürmedi). ',
+      doneFailed: (n) => n + ' katman düzenlenemedi (kütüphane bileşeni olabilir). ',
+      doneUndo: '⌘Z / Ctrl+Z ile geri alabilirsin. Kontrol için yeniden tara.',
+      errTitle: 'Bir hata oluştu'
+    }
+  };
+
+  const t = () => S[lang];
+  let prefs = { scale: 3, minSize: 102400 };
+  let scope = 'page';
+  let selection = { count: 0, container: false, name: null };
+  let items = null;          // null = not scanned yet. Each: scan data + { newBytes, thumb, cursor }
+  let checked = new Set();
+  let busy = null;           // 'scan' | 'apply' | null
+  let result = null;         // last apply-result / error, shown in a banner
+  const rows = new Map();    // hash -> row element
+  const resized = new Map(); // 'hash@WxH' -> resized bytes, measured during preview and reused on apply
+
+  const size = (b) => b >= 1048576 ? (b / 1048576).toFixed(b >= 10485760 ? 0 : 1) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB';
+
+  // Measured saving once the preview has run, otherwise a guess from the pixel count.
+  function gainOf(it) {
+    if (it.newBytes != null) return Math.max(0, it.bytes - it.newBytes);
+    return Math.round(it.bytes * (1 - (it.targetW * it.targetH) / (it.imgW * it.imgH)));
+  }
+
+  function savePrefs() { send({ f: 'images', type: 'setPrefs', prefs }); }
+
+  // ---------- Controls ----------
+
+  function setSeg(id, value) {
+    root.querySelectorAll('#io-' + id + ' button').forEach((b) => b.classList.toggle('on', b.dataset.v === String(value)));
+  }
+
+  function renderControls() {
+    setSeg('scope', scope);
+    root.querySelector('#io-scope [data-v=selection]').disabled = !selection.count;
+    $('scopeHint').textContent = scope === 'selection'
+      ? (selection.name ? t().scopeHintSel(selection.name) : t().scopeHintSelN(selection.count))
+      : !selection.count && scope === 'page' ? t().scopeHintNone
+      : scope === 'page' ? t().scopeHintPage : t().scopeHintDoc;
+
+    setSeg('scale', prefs.scale);
+    $('scaleWarn').classList.toggle('show', prefs.scale === 2);
+    setSeg('minSize', prefs.minSize);
+
+    $('scan').textContent = busy === 'scan' ? t().scanning : t().scan;
+    $('scan').disabled = !!busy || (scope === 'selection' && !selection.count);
+  }
+
+  function onSelection(m) {
+    selection = m;
+    if (!m.focused) { // ignore the selection we made ourselves when jumping to a layer
+      if (m.container && scope !== 'selection') scope = 'selection';
+      else if (!m.count && scope === 'selection') scope = 'page';
+    }
+    renderControls();
+  }
+
+  // ---------- Results ----------
+
+  function renderResults() {
+    const cl = root.classList;
+    cl.toggle('has-results', items !== null);
+    cl.toggle('has-items', !!(items && items.length));
+
+    const banner = $('resultBanner');
+    banner.className = 'banner' + (result ? ' show ' + (result.error ? 'err' : 'ok') : '');
+    if (result && result.error) {
+      $('resultTitle').textContent = t().errTitle;
+      $('resultText').textContent = result.error;
+    } else if (result) {
+      $('resultTitle').textContent = t().doneTitle(result.done, size(result.savedBytes));
+      $('resultText').textContent = (result.skipped ? t().doneSkipped(result.skipped) : '') +
+        (result.failedNodes ? t().doneFailed(result.failedNodes) : '') + t().doneUndo;
+    }
+
+    rows.clear();
+    if (items === null) return;
+    const list = $('list');
+    list.innerHTML = '';
+    $('toggle').style.display = items.length ? '' : 'none';
+
+    if (!items.length) {
+      renderCounts();
+      const d = document.createElement('div');
+      d.className = 'empty';
+      d.innerHTML = '<div></div><div class="hint"></div>';
+      d.firstChild.textContent = t().empty;
+      d.lastChild.textContent = t().emptyHint;
+      list.append(d);
+      return;
+    }
+
+    items.forEach((it) => {
+      const row = document.createElement('div');
+      row.className = 'entry';
+      row.innerHTML = '<input type="checkbox"><div class="thumb"></div>' +
+        '<div class="meta"><div class="name"></div><div class="sub dims"></div><div class="sub uses"></div></div>' +
+        '<div class="side"><div class="size"></div><div class="gain"></div></div>';
+      const box = row.querySelector('input');
+      box.onchange = () => { box.checked ? checked.add(it.hash) : checked.delete(it.hash); renderCounts(); };
+      row.querySelector('.meta').onclick = row.querySelector('.thumb').onclick = () => goTo(it);
+      row.querySelector('.dims').textContent = it.imgW + '×' + it.imgH + ' → ' + it.targetW + '×' + it.targetH +
+        (it.format ? ' · ' + it.format : '');
+      row.querySelector('.size').textContent = size(it.bytes);
+      rows.set(it.hash, row);
+      list.append(row);
+      renderRow(it);
+    });
+    renderCounts();
+  }
+
+  function renderRow(it) {
+    const row = rows.get(it.hash);
+    if (!row) return;
+    const n = it.nodes.length;
+    // After a click, the row shows the use that was just selected; before that, the first one.
+    const shown = it.cursor ? it.nodes[(it.cursor - 1) % n] : it.nodes[0];
+    row.querySelector('.name').textContent = shown.name;
+    row.querySelector('.uses').textContent =
+      (it.cursor && n > 1 ? t().useOf(((it.cursor - 1) % n) + 1, n) : t().uses(n)) + ' · ' + shown.page;
+    row.querySelector('.meta').title = n > 1 ? t().goTo + ' · ' + t().goToNext : t().goTo;
+    row.querySelector('input').checked = checked.has(it.hash);
+
+    const thumb = row.querySelector('.thumb');
+    thumb.classList.toggle('loading', !it.thumb);
+    if (it.thumb && !thumb.firstChild) {
+      const img = document.createElement('img');
+      img.src = it.thumb;
+      thumb.append(img);
+    }
+
+    const gain = row.querySelector('.gain');
+    const noGain = it.newBytes != null && it.newBytes >= it.bytes;
+    row.classList.toggle('no-gain', noGain);
+    gain.className = 'gain' + (noGain ? ' none' : it.newBytes == null ? ' est' : '');
+    gain.textContent = noGain ? t().noGain : (it.newBytes == null ? '~' : '') + '−' + size(gainOf(it));
+  }
+
+  function renderCounts() {
+    if (!items) return;
+    const total = items.reduce((s, i) => s + gainOf(i), 0);
+    $('counts').innerHTML = t().counts(items.length) + (items.length ? t().countsGain('~' + size(total)) : '');
+    if (!items.length) return;
+    const sel = items.filter((i) => checked.has(i.hash));
+    $('selInfo').textContent = t().selInfo(sel.length, size(sel.reduce((s, i) => s + gainOf(i), 0)));
+    $('apply').textContent = busy === 'apply' ? t().applying : t().apply(sel.length);
+    $('apply').disabled = !!busy || !sel.length;
+    $('toggle').textContent = sel.length === items.length ? t().selectNone : t().selectAll;
+  }
+
+  // Each click selects the next use of the same image.
+  function goTo(it) {
+    const node = it.nodes[(it.cursor || 0) % it.nodes.length];
+    it.cursor = (it.cursor || 0) + 1;
+    send({ f: 'images', type: 'focus', id: node.id });
+    renderRow(it);
+  }
+
+  function applyLang() {
+    translate(root, t());
+    renderControls();
+    renderResults();
+  }
+
+  function clearResults() {
+    if (items) items.forEach((i) => { if (i.thumb) URL.revokeObjectURL(i.thumb); });
+    items = null;
+    checked = new Set();
+    resized.clear();
+  }
+
+  // ---------- Pixel work ----------
+
+  // Step down by halves for better quality on large reductions.
+  function downscale(bitmap, tw, th) {
+    let src = bitmap, w = bitmap.width, h = bitmap.height;
+    while (w / 2 >= tw && h / 2 >= th) {
+      const c = new OffscreenCanvas(Math.round(w / 2), Math.round(h / 2));
+      const ctx = c.getContext('2d');
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(src, 0, 0, c.width, c.height);
+      src = c; w = c.width; h = c.height;
+    }
+    const out = new OffscreenCanvas(tw, th);
+    const ctx = out.getContext('2d');
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(src, 0, 0, tw, th);
+    return out;
+  }
+
+  // Keeps the original format. JPEGs have to be re-encoded after resizing; a high quality keeps that invisible.
+  async function encode(bitmap, targetW, targetH, format) {
+    const canvas = downscale(bitmap, targetW, targetH);
+    const blob = format === 'JPEG'
+      ? await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.92 })
+      : await canvas.convertToBlob({ type: 'image/png' });
+    return new Uint8Array(await blob.arrayBuffer());
+  }
+
+  async function thumbnail(bitmap) {
+    const s = Math.min(1, 96 / Math.max(bitmap.width, bitmap.height));
+    const c = downscale(bitmap, Math.max(1, Math.round(bitmap.width * s)), Math.max(1, Math.round(bitmap.height * s)));
+    return URL.createObjectURL(await c.convertToBlob({ type: 'image/png' }));
+  }
+
+  const key = (m) => m.hash + '@' + m.targetW + 'x' + m.targetH;
+
+  // Draws the thumbnail and measures the real size after resizing (kept for when the user applies).
+  async function preview(m) {
+    let newBytes = null, thumb = null;
+    try {
+      const bmp = await createImageBitmap(new Blob([m.bytes]));
+      thumb = await thumbnail(bmp);
+      const out = await encode(bmp, m.targetW, m.targetH, m.format);
+      resized.set(key(m), out);
+      newBytes = out.length;
+    } catch (e) {}
+    send({ f: 'images', type: 'previewed', hash: m.hash });
+    const it = items && items.find((i) => i.hash === m.hash);
+    if (!it) { if (thumb) URL.revokeObjectURL(thumb); return; }
+    it.thumb = thumb;
+    it.newBytes = newBytes;
+    if (newBytes != null && newBytes >= it.bytes) checked.delete(it.hash);
+    renderRow(it);
+    renderCounts();
+  }
+
+  async function resize(m) {
+    try {
+      let out = resized.get(key(m));
+      if (!out) out = await encode(await createImageBitmap(new Blob([m.bytes])), m.targetW, m.targetH, m.format);
+      send({ f: 'images', type: 'resized', hash: m.hash, bytes: out });
+    } catch (e) {
+      send({ f: 'images', type: 'resized', hash: m.hash, bytes: null });
+    }
+  }
+
+  // ---------- Messages ----------
+
+  function onMessage(m) {
+    if (m.type === 'prefs') {
+      const p = m.prefs || {};
+      if ([2, 3, 4].indexOf(p.scale) !== -1) prefs.scale = p.scale;
+      if ([102400, 512000, 1048576].indexOf(p.minSize) !== -1) prefs.minSize = p.minSize;
+      renderControls();
+    } else if (m.type === 'selection') {
+      onSelection(m);
+    } else if (m.type === 'progress') {
+      $('status').textContent = m.phase === 'scan' ? t().scanProgress(m.n, m.total) : t().applyProgress(m.n, m.total);
+    } else if (m.type === 'preview') {
+      preview(m);
+    } else if (m.type === 'resize') {
+      resize(m);
+    } else if (m.type === 'scan-result') {
+      busy = null;
+      items = m.items.map((i) => Object.assign(i, { newBytes: null, thumb: null, cursor: 0 }));
+      checked = new Set(items.map((i) => i.hash));
+      $('status').textContent = '';
+      renderControls();
+      renderResults();
+    } else if (m.type === 'apply-result') {
+      busy = null;
+      result = m;
+      clearResults();
+      $('status').textContent = '';
+      renderControls();
+      renderResults();
+    } else if (m.type === 'error') {
+      busy = null;
+      result = { error: m.text };
+      $('status').textContent = '';
+      renderControls();
+      renderResults();
+    }
+  }
+
+  // ---------- Events ----------
+
+  root.querySelectorAll('#io-scope button').forEach((b) => {
+    b.onclick = () => { scope = b.dataset.v; renderControls(); };
+  });
+  root.querySelectorAll('#io-scale button').forEach((b) => {
+    b.onclick = () => { prefs.scale = Number(b.dataset.v); savePrefs(); renderControls(); };
+  });
+  root.querySelectorAll('#io-minSize button').forEach((b) => {
+    b.onclick = () => { prefs.minSize = Number(b.dataset.v); savePrefs(); renderControls(); };
+  });
+
+  $('scan').onclick = () => {
+    busy = 'scan';
+    result = null;
+    clearResults();
+    $('status').textContent = '';
+    renderControls();
+    renderResults();
+    send({ f: 'images', type: 'scan', scope, scale: prefs.scale, minBytes: prefs.minSize });
+  };
+
+  $('toggle').onclick = () => {
+    const all = items.every((i) => checked.has(i.hash));
+    checked = new Set(all ? [] : items.map((i) => i.hash));
+    items.forEach(renderRow);
+    renderCounts();
+  };
+
+  $('apply').onclick = () => {
+    const hashes = items.filter((i) => checked.has(i.hash)).map((i) => i.hash);
+    if (!hashes.length) return;
+    busy = 'apply';
+    renderControls();
+    renderCounts();
+    send({ f: 'images', type: 'apply', hashes });
+  };
+
+  return { applyLang, onMessage };
+})();
+
+// =====================================================================================
+// Shell: navigation, language, version check
+// =====================================================================================
+
+const MODULES = { checklist: Checklist, readme: ReadMe, note: Note, images: Images };
+const $ = (id) => document.getElementById(id);
+
+// Shows the home screen (null) or a tool, and tells code.js which tool is on screen.
+function go(f) {
+  const next = MODULES[f] ? f : 'home';
+  if (screen === 'readme' && next !== 'readme') ReadMe.onLeave();
+  screen = next;
+  document.body.dataset.screen = next;
+  document.body.classList.remove('settings-open');
+  send({ type: 'nav', f: next === 'home' ? null : next });
+}
+
+function applyLang() {
+  document.documentElement.lang = lang;
+  translate(document, g(), true);
+  document.querySelectorAll('[data-lang]').forEach((b) => b.classList.toggle('on', b.dataset.lang === lang));
+  $('sVer').textContent = g().version + ' ' + VERSION + (remoteVersion ? '  ·  GitHub: v' + remoteVersion : '');
+  if (latestVersion) $('versions').textContent = g().installed + ': v' + VERSION + '  ·  ' + g().latest + ': v' + latestVersion;
+  Object.keys(MODULES).forEach((k) => MODULES[k].applyLang());
+}
+
+// Returns true if version a is older than b (e.g. '1.0.0' < '1.1.0').
+function isOlder(a, b) {
+  const pa = String(a).split('.').map(Number), pb = String(b).split('.').map(Number);
+  for (let i = 0; i < 3; i++) {
+    const x = pa[i] || 0, y = pb[i] || 0;
+    if (x !== y) return x < y;
+  }
+  return false;
+}
+
+// The version check is mandatory and covers every tool: the plugin stays behind a gate until it succeeds.
+// If the check can't complete (offline, GitHub unreachable, bad response) the gate stays up with a retry button.
+// A silent re-check (periodic, while the plugin stays open) only blocks when it positively finds a newer
+// version; a failed silent check is ignored so a brief network blip doesn't interrupt someone mid-work.
+async function checkVersion(silent) {
+  const cl = document.body.classList;
+  if (!silent) {
+    cl.remove('check-failed', 'outdated');
+    cl.add('checking');
+  }
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 8000);
+    const res = await fetch(VERSION_URL + '?t=' + Date.now(), { signal: ctrl.signal, cache: 'no-store' });
+    clearTimeout(timer);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const latest = (await res.json()).version;
+    if (typeof latest !== 'string' || !/^\d+\.\d+\.\d+$/.test(latest)) throw new Error('Bad version');
+    remoteVersion = latest;
+    console.log('[Pyde Design] installed v' + VERSION + ', GitHub v' + latest);
+    if (isOlder(VERSION, latest)) {
+      latestVersion = latest;
+      cl.add('outdated');
+    }
+    applyLang();
+    cl.remove('checking');
+  } catch (e) {
+    if (!silent) {
+      cl.remove('checking');
+      cl.add('check-failed');
+    }
+  }
+}
+$('retry').onclick = () => checkVersion();
+setInterval(() => checkVersion(true), 5 * 60 * 1000);
+
+// ---------- Events ----------
+
+document.querySelectorAll('.back').forEach((b) => { b.innerHTML = BACK; });
+document.querySelectorAll('.feature .back').forEach((b) => { b.onclick = () => go(null); });
+document.querySelectorAll('[data-go]').forEach((b) => { b.onclick = () => go(b.dataset.go); });
+$('goHome').onclick = () => go(null);
+$('openSettings').onclick = () => document.body.classList.add('settings-open');
+$('closeSettings').onclick = () => document.body.classList.remove('settings-open');
+document.querySelectorAll('[data-lang]').forEach((b) => {
+  b.onclick = () => { lang = b.dataset.lang; send({ type: 'setLang', lang }); applyLang(); };
+});
+document.addEventListener('keydown', (e) => {
+  if (!(e.metaKey || e.ctrlKey) || e.key !== 'Enter') return;
+  if (screen === 'readme') ReadMe.save();
+  else if (screen === 'note') Note.save();
+});
+
+onmessage = (e) => {
+  const m = e.data.pluginMessage;
+  if (!m) return;
+  if (m.type === 'prefs' && !m.f) {
+    lang = m.lang === 'tr' ? 'tr' : 'en';
+    applyLang();
+    go(m.route); // opened from a tool's menu item or relaunch button: straight to that tool
+    document.body.classList.remove('loading');
+  } else if (MODULES[m.f]) {
+    MODULES[m.f].onMessage(m);
+  }
+};
+
+document.querySelector('.logo').src = 'data:image/png;base64,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';
+$('ver').textContent = 'v' + VERSION;
+applyLang();
+send({ type: 'ready' });
+setTimeout(() => document.body.classList.remove('loading'), 1000); // fallback if prefs never arrive
+checkVersion();
+</script>
+</body>
+</html>
