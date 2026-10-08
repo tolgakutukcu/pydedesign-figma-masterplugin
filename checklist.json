@@ -1,0 +1,15 @@
+[
+  {"id":"component-structure","en":"Component structure preserved","tr":"Component yapısı korundu","legacy":"Component yapısı korundu"},
+  {"id":"styles-variables","en":"Colors, text and effects use styles / variables","tr":"Renk, text ve efektler style / variable ile kullanılmış","legacy":"Renk, text ve efektler style / variable ile kullanılmış"},
+  {"id":"clean-layers","en":"Unnecessary and hidden layers removed","tr":"Gereksiz ve gizli layer’lar kaldırıldı","legacy":"Gereksiz ve gizli layer’lar kaldırıldı"},
+  {"id":"ads","en":"Ad placements added on screens with ads","tr":"Reklamlı ekranlarda reklam gösterimi eklendi","legacy":"Reklamlı ekranlarda reklam gösterimi eklendi"},
+  {"id":"no-extra-page","en":"No extra page added for feature updates","tr":"Feature güncellemesi ise ekstra sayfa eklenmedi","legacy":"Feature güncellemesi ise ekstra sayfa eklenmedi"},
+  {"id":"drafts","en":"Drafts cleaned up","tr":"Draft’lar temizlendi","legacy":"Draft’lar temizlendi"},
+  {"id":"notes","en":"Necessary notes added","tr":"Gerekli notlar eklendi","legacy":"Gerekli notlar eklendi"},
+  {"id":"auto-layout","en":"Auto layout / responsive design checked","tr":"Auto layout / responsive design kontrol edildi","legacy":"Auto layout / responsive design kontrol edildi"},
+  {"id":"small-screen","en":"Small screen check done","tr":"Küçük ekran kontrolü yapıldı","legacy":"Küçük ekran kontrolü yapıldı"},
+  {"id":"naming","en":"Root frame / section naming done","tr":"Root frame / section isimlendirmesi yapılmış","legacy":"Root frame / section isimlendirmesi yapılmış"},
+  {"id":"long-text","en":"Long text tested for other languages","tr":"Yabancı diller için uzun metin testi yapıldı","legacy":"Yabancı diller için uzun metin testi yapıldı"},
+  {"id":"states","en":"Empty, loading and error states added","tr":"Empty, loading ve hata state’leri eklendi","legacy":"Empty, loading ve hata state’leri eklendi"},
+  {"id":"dark-mode","en":"Dark mode / theme check done","tr":"Dark mode / tema kontrolü yapıldı","legacy":"Dark mode / tema kontrolü yapıldı"}
+]

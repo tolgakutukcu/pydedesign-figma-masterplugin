@@ -874,7 +874,10 @@
         <div class="hint" data-i18n="langHint"></div>
       </div>
 
-      <div class="s-ver" id="sVer"></div>
+      <div>
+        <div class="s-ver" id="sVer"></div>
+        <div class="s-ver" id="sChecklist"></div>
+      </div>
     </div>
   </div>
 
@@ -908,7 +911,7 @@
 
 <script>
 // Only this plugin as a whole has a version; the tools inside it don't.
-const VERSION = '1.0.0';
+const VERSION = '1.1.0';
 const REPO = 'tolgakutukcu/pydedesign-figma-masterplugin';
 const RAW = 'https://raw.githubusercontent.com/' + REPO + '/main/';
 const VERSION_URL = RAW + 'version.json';
@@ -996,9 +999,12 @@ const Checklist = (() => {
   const root = document.getElementById('s-checklist');
   const $ = (id) => document.getElementById('ck-' + id);
 
+  // The items come from checklist.json in the GitHub repo, so they can be changed without a new
+  // plugin version. This built-in copy is used until it loads, and if it can't be loaded or is invalid.
   // `id` is what gets stored in the file, so item text can be edited freely.
   // `legacy` is the old text key used before ids existed, kept so existing checks still show up.
-  const ITEMS = [
+  const CHECKLIST_URL = RAW + 'checklist.json';
+  const BUILT_IN = [
     { id: 'component-structure', legacy: 'Component yapısı korundu',
       en: 'Component structure preserved', tr: 'Component yapısı korundu' },
     { id: 'styles-variables', legacy: 'Renk, text ve efektler style / variable ile kullanılmış',
@@ -1036,7 +1042,9 @@ const Checklist = (() => {
       multiText: (n) => n + ' different frames / sections are selected. The checklist shows one at a time.',
       inSection: (s) => 'in section “' + s + '”',
       items: (n, total) => n + ' / ' + total + ' items',
-      lastUpdated: 'Last updated: ', nothingChecked: 'Nothing checked yet'
+      lastUpdated: 'Last updated: ', nothingChecked: 'Nothing checked yet',
+      fromGithub: (n) => 'Checklist: ' + n + ' items from GitHub',
+      fromBuiltIn: 'Checklist: built-in list (checklist.json couldn’t be loaded)'
     },
     tr: {
       reset: 'Sıfırla', completed: 'Tamamlandı', back: 'Geri',
@@ -1046,7 +1054,9 @@ const Checklist = (() => {
       multiText: (n) => n + ' farklı frame / section seçili. Checklist aynı anda sadece birini gösterir.',
       inSection: (s) => '“' + s + '” section’ında',
       items: (n, total) => n + ' / ' + total + ' madde',
-      lastUpdated: 'Son güncelleme: ', nothingChecked: 'Henüz işaretlenmedi'
+      lastUpdated: 'Son güncelleme: ', nothingChecked: 'Henüz işaretlenmedi',
+      fromGithub: (n) => 'Checklist: GitHub’dan ' + n + ' madde',
+      fromBuiltIn: 'Checklist: yerleşik liste (checklist.json yüklenemedi)'
     }
   };
 
@@ -1059,9 +1069,12 @@ const Checklist = (() => {
   const t = () => S[lang];
   let targetId = null;
   let lastState = { status: 'none' };
+  let items = BUILT_IN;
+  let fromGithub = false;
 
   function build() {
-    ITEMS.forEach((item) => {
+    $('list').innerHTML = '';
+    items.forEach((item) => {
       const li = document.createElement('li');
       li.innerHTML = '<label><input type="checkbox"><span class="box">' + CHECK + '</span><span class="text"></span></label>';
       li.querySelector('input').onchange = (e) => {
@@ -1102,7 +1115,7 @@ const Checklist = (() => {
       li.querySelector('input').checked = on;
       if (on) n++;
     });
-    const total = ITEMS.length;
+    const total = items.length;
     $('bar').style.width = (n / total) * 100 + '%';
     $('count').textContent = t().items(n, total);
     $('upd').textContent = m.at ? t().lastUpdated + (m.by ? m.by + ' · ' : '') + ago(m.at) : t().nothingChecked;
@@ -1113,7 +1126,45 @@ const Checklist = (() => {
   function applyLang() {
     translate(root, t());
     root.querySelectorAll('li').forEach((li) => { li.querySelector('.text').textContent = li._item[lang]; });
+    document.getElementById('sChecklist').textContent = fromGithub ? t().fromGithub(items.length) : t().fromBuiltIn;
     render(lastState);
+  }
+
+  // checklist.json is a list of { id, en, tr, legacy? }. Items without an id or text are skipped,
+  // a missing Turkish text falls back to English, and a repeated id is only used once.
+  function parseItems(j) {
+    if (!Array.isArray(j)) return null;
+    const seen = new Set();
+    const out = [];
+    for (const i of j) {
+      if (!i || typeof i.id !== 'string' || !i.id.trim() || seen.has(i.id) || typeof i.en !== 'string' || !i.en.trim()) continue;
+      seen.add(i.id);
+      out.push({
+        id: i.id,
+        en: i.en.trim(),
+        tr: typeof i.tr === 'string' && i.tr.trim() ? i.tr.trim() : i.en.trim(),
+        legacy: typeof i.legacy === 'string' ? i.legacy : undefined
+      });
+    }
+    return out.length ? out : null;
+  }
+
+  async function loadItems() {
+    try {
+      const res = await fetch(CHECKLIST_URL + '?t=' + Date.now(), { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const next = parseItems(await res.json());
+      if (!next) throw new Error('No valid items');
+      const changed = !fromGithub || JSON.stringify(next) !== JSON.stringify(items);
+      fromGithub = true;
+      if (changed) {
+        items = next;
+        build();
+      }
+    } catch (e) {
+      console.warn('[Pyde Design] checklist.json not loaded, using ' + (fromGithub ? 'the last loaded list' : 'the built-in list'), e);
+    }
+    applyLang();
   }
 
   function onMessage(m) {
@@ -1122,6 +1173,8 @@ const Checklist = (() => {
 
   $('reset').onclick = () => { if (targetId) send({ f: 'checklist', type: 'reset', id: targetId }); };
   build();
+  loadItems();
+  setInterval(loadItems, 5 * 60 * 1000);
 
   // Light sync so changes made by other designers show up.
   setInterval(() => { if (screen === 'checklist') send({ f: 'checklist', type: 'refresh' }); }, 3000);

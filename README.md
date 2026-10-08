@@ -34,13 +34,28 @@ Only Pyde Design as a whole has a version; the tools inside it don't. On start t
 2. Bump `version` in `version.json` to the same number.
 3. Push to `main`.
 
-`version.json` and `team.json` must stay in the repo root on `main` and the repo must be public, because the plugin reads them from `raw.githubusercontent.com`.
+`version.json`, `team.json` and `checklist.json` must stay in the repo root on `main` and the repo must be public, because the plugin reads them from `raw.githubusercontent.com`.
 
 ## Handoff Pre Checklist
 
 Select a section, a root frame, or a frame placed directly inside a section. The state is saved in the file itself, so every designer sees the same status.
 
-To change the items, edit the `ITEMS` array in `ui.html`. Each item has a stable `id` (what is stored in the file) and a display text per language, so you can reword an item without losing existing checks. Never change an existing `id`.
+### Changing the items
+
+The items live in **`checklist.json`** in this repo. Edit it and push to `main`; everyone gets the new list the next time they open the plugin, or within 5 minutes if it is open (no version bump needed).
+
+```json
+[
+  { "id": "component-structure", "en": "Component structure preserved", "tr": "Component yapısı korundu" }
+]
+```
+
+- `id` is what is stored in the file. **Never change an existing `id`**, or that item's existing checks are lost. The texts can be reworded freely; `tr` falls back to `en` when missing.
+- Adding an item makes it unchecked everywhere, so a frame that was complete becomes incomplete.
+- Removing an item is safe: its old checks stay in the file but don't count, and come back if the item is added again.
+- `legacy` is only for the original items (their text key from before ids existed); new items don't need it.
+
+If `checklist.json` can't be loaded or isn't valid, the plugin uses the list built into `ui.html`. Settings shows which one is in use. Keep that built-in list (`BUILT_IN` in `ui.html`) roughly in sync when you release a new version.
 
 ## Design ReadMe
 
