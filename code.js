@@ -53,6 +53,46 @@ function relaunch(node, data) {
   try { node.setRelaunchData(data); } catch (e) {}
 }
 
+// ---------- Drafts ----------
+// Unsaved Frame Note and Design ReadMe edits are kept on this computer while typing, so they survive the
+// plugin being closed (Figma closes a running plugin when someone clicks into a widget, for example).
+// A draft is keyed by file + tool + node id; the file gets a random token in this plugin's private data,
+// since node ids repeat across files. Drafts older than a week are dropped.
+
+const DRAFTS_KEY = 'pyde-drafts';
+const DRAFT_TTL = 7 * 24 * 60 * 60 * 1000;
+let drafts = {};
+let fileToken = null;
+
+async function loadDrafts() {
+  const saved = await figma.clientStorage.getAsync(DRAFTS_KEY);
+  drafts = saved && typeof saved === 'object' ? saved : {};
+  const now = Date.now();
+  for (const k of Object.keys(drafts)) if (!drafts[k] || now - drafts[k].at > DRAFT_TTL) delete drafts[k];
+}
+function draftKey(tool, id) {
+  if (!fileToken) {
+    fileToken = figma.root.getPluginData('fileToken');
+    if (!fileToken) {
+      fileToken = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+      try { figma.root.setPluginData('fileToken', fileToken); } catch (e) {}
+    }
+  }
+  return fileToken + '|' + tool + '|' + id;
+}
+function getDraft(tool, id) {
+  const d = drafts[draftKey(tool, id)];
+  return d ? d.data : null;
+}
+// `data` null clears the draft.
+async function setDraft(tool, id, data) {
+  const k = draftKey(tool, id);
+  if (data) drafts[k] = { data, at: Date.now() };
+  else if (drafts[k]) delete drafts[k];
+  else return;
+  await figma.clientStorage.setAsync(DRAFTS_KEY, drafts);
+}
+
 // The cards drawn by Design ReadMe and Frame Note, and the titles made by Title Maker, are frames that
 // sit directly in a section, like the designs themselves. The other tools ignore them.
 function isToolCard(node) {
@@ -568,6 +608,7 @@ const ReadMe = (() => {
         page: p ? p.name : ''
       },
       spec,
+      draft: getDraft('readme', s.id),
       me: userName()
     });
   }
@@ -684,6 +725,7 @@ const ReadMe = (() => {
     syncName(node, data.status);
     writeIndex(node, data);
     registerPeople(data);
+    await setDraft('readme', node.id, null);
     await rememberPeople(data);
     await sendPeople();
     figma.notify(t('Design ReadMe saved', 'Tasarım künyesi kaydedildi'));
@@ -698,6 +740,7 @@ const ReadMe = (() => {
     relaunch(node, {});
     syncName(node, null);
     removeIndex(node.id);
+    await setDraft('readme', node.id, null);
     figma.notify(t('Design ReadMe removed', 'Tasarım künyesi kaldırıldı'));
   }
 
@@ -753,6 +796,7 @@ const ReadMe = (() => {
     if (msg.type === 'goto') return goTo(msg.id);
     if (msg.type === 'forgetPerson') { await forgetPerson(String(msg.name)); return sendPeople(); }
     if (msg.type === 'fit') { await fit(msg.id); return pushState(); }
+    if (msg.type === 'draft') return setDraft('readme', String(msg.id), msg.data || null);
   }
 
   async function activate() {
@@ -1217,6 +1261,7 @@ const Note = (() => {
         type: 'state', status: 'ok',
         target: { id: f.id, name: f.name, section: sectionOf(f), page: p ? p.name : '' },
         note: readNote(f),
+        draft: getDraft('note', f.id),
         overlaps: overlaps(findCard(f)),
         me: userName()
       });
@@ -1224,6 +1269,7 @@ const Note = (() => {
     if (frames.length) {
       return post('note', {
         type: 'state', status: 'multiple',
+        draft: getDraft('note', multiKey(frames.map((f) => f.id))),
         frames: frames.map((f) => {
           const d = readNote(f);
           return { id: f.id, name: f.name, section: sectionOf(f), count: d ? d.entries.length : 0 };
@@ -1235,6 +1281,11 @@ const Note = (() => {
       status: orphan ? 'orphan' : section ? 'section' : 'none',
       orphan: orphan ? { id: orphan.id, name: cardInfo(orphan).frameName || '?' } : null
     });
+  }
+
+  // The draft of the "add to all" text belongs to that exact set of frames.
+  function multiKey(ids) {
+    return ids.slice().sort().join(',');
   }
 
   // ---------- Messages ----------
@@ -1299,6 +1350,7 @@ const Note = (() => {
         return p && p.text.trim() === e.text ? p : { id: e.id, text: e.text, by: me, at: now };
       });
     const card = await apply(frame, { v: 1, entries });
+    await setDraft('note', frame.id, null);
     if (!card) return figma.notify(t('Note removed', 'Not kaldırıldı'));
     figma.notify(t('Note saved', 'Not kaydedildi'));
     warnOverlaps(card);
@@ -1320,6 +1372,7 @@ const Note = (() => {
       if (overlaps(card).length) warnOverlaps(card);
       n++;
     }
+    await setDraft('note', multiKey(Array.isArray(msg.ids) ? msg.ids : []), null);
     figma.notify(t('Note added to ' + n + (n === 1 ? ' frame' : ' frames'), 'Not ' + n + ' frame’e eklendi'));
   }
 
@@ -1327,6 +1380,7 @@ const Note = (() => {
     const frame = await getFrame(msg.id, true);
     if (!frame) return;
     removeNote(frame);
+    await setDraft('note', frame.id, null);
     figma.notify(t('Note removed', 'Not kaldırıldı'));
   }
 
@@ -1371,6 +1425,9 @@ const Note = (() => {
       return sendOverview();
     }
     if (msg.type === 'goto') return goTo(msg.id);
+    if (msg.type === 'draft') {
+      return setDraft('note', Array.isArray(msg.ids) ? multiKey(msg.ids) : String(msg.id), msg.data || null);
+    }
   }
 
   // Cards follow their frames whichever tool is on screen, so this starts with the plugin.
@@ -1928,6 +1985,7 @@ figma.ui.onmessage = async (msg) => {
     if (msg.type === 'ready') {
       const saved = await figma.clientStorage.getAsync(LANG_KEY);
       if (saved === 'en' || saved === 'tr') lang = saved;
+      await loadDrafts();
       figma.ui.postMessage({ type: 'prefs', lang, route: startRoute });
       return Note.start();
     }

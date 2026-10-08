@@ -713,6 +713,12 @@
             <button class="btn small" id="rm-fit" data-i18n="fit"></button>
           </div>
 
+          <div class="banner info" id="rm-draftBanner">
+            <b data-i18n="draftTitle"></b>
+            <span data-i18n="draftText"></span>
+            <div class="actions"><button class="btn small" id="rm-dropDraft" data-i18n="dropDraft"></button></div>
+          </div>
+
           <div class="banner info" id="rm-staleBanner">
             <b data-i18n="staleTitle"></b>
             <span id="rm-staleText"></span>
@@ -821,6 +827,12 @@
               <div class="sub" id="nt-targetSub"></div>
             </div>
             <span class="badge" id="nt-badge"></span>
+          </div>
+
+          <div class="banner info" id="nt-draftBanner">
+            <b data-i18n="draftTitle"></b>
+            <span data-i18n="draftText"></span>
+            <div class="actions"><button class="btn small" id="nt-dropDraft" data-i18n="dropDraft"></button></div>
           </div>
 
           <div class="banner info" id="nt-staleBanner">
@@ -1146,7 +1158,7 @@
 
 <script>
 // Only this plugin as a whole has a version; the tools inside it don't.
-const VERSION = '1.4.1';
+const VERSION = '1.4.2';
 const REPO = 'tolgakutukcu/pydedesign-figma-masterplugin';
 const RAW = 'https://raw.githubusercontent.com/' + REPO + '/main/';
 const VERSION_URL = RAW + 'version.json';
@@ -1465,6 +1477,9 @@ const ReadMe = (() => {
       staleText: (n) => 'You left “' + n + '” without saving. Go back to it, or discard the changes. Saving here still writes to “' + n + '”.',
       goBack: (n) => 'Go back to “' + n + '”',
       discard: 'Discard changes',
+      draftTitle: 'Unsaved changes restored',
+      draftText: 'The plugin was closed before you saved (for example by clicking into a widget). Your changes are back; save them or drop them.',
+      dropDraft: 'Drop these changes',
       ovHint: 'ReadMes on the current page are refreshed every time you open this tab. Other pages show their last known state.',
       scanAll: 'Scan all pages', scanning: 'Scanning…', all: 'All', current: 'current page',
       ovEmpty: 'No ReadMes in this file yet.', ovEmptyFilter: 'No ReadMes with this status.',
@@ -1494,6 +1509,9 @@ const ReadMe = (() => {
       staleText: (n) => '“' + n + '” section’ından kaydetmeden çıktın. Geri dönebilir ya da değişiklikleri atabilirsin. Buradan kaydedersen yine “' + n + '” için kaydedilir.',
       goBack: (n) => '“' + n + '” section’ına dön',
       discard: 'Değişiklikleri at',
+      draftTitle: 'Kaydedilmemiş değişiklikler geri yüklendi',
+      draftText: 'Plugin sen kaydetmeden kapandı (örneğin bir widget’a tıklandığında). Değişikliklerin geri geldi; kaydedebilir ya da atabilirsin.',
+      dropDraft: 'Bu değişiklikleri at',
       ovHint: 'Bulunduğun sayfadaki künyeler bu sekmeyi her açtığında yenilenir. Diğer sayfalar bilinen son durumu gösterir.',
       scanAll: 'Tüm sayfaları tara', scanning: 'Taranıyor…', all: 'Tümü', current: 'bu sayfa',
       ovEmpty: 'Bu dosyada henüz künye yok.', ovEmptyFilter: 'Bu durumda künye yok.',
@@ -1624,6 +1642,29 @@ const ReadMe = (() => {
 
   function markDirty() {
     if (!dirty) { dirty = true; renderFooter(); }
+    scheduleDraft();
+  }
+
+  // Unsaved edits are kept as a draft by code.js, so they come back if the plugin gets closed.
+  let draftTimer = null;
+  function scheduleDraft() {
+    clearTimeout(draftTimer);
+    const id = editing && editing.id;
+    if (id) draftTimer = setTimeout(() => send({ f: 'readme', type: 'draft', id, data: collect() }), 400);
+  }
+  function dropDraft(id) {
+    clearTimeout(draftTimer);
+    if (id) send({ f: 'readme', type: 'draft', id, data: null });
+    $('draftBanner').classList.remove('show');
+  }
+  function formFromDraft(d) {
+    const o = d.owners || {};
+    const list = (a) => (Array.isArray(a) ? a.slice() : []);
+    return {
+      status: ['wip', 'review', 'ready'].indexOf(d.status) !== -1 ? d.status : 'wip',
+      owners: { design: list(o.design), dev: list(o.dev), product: list(o.product) },
+      jira: list(d.jira), slack: list(d.slack), notes: typeof d.notes === 'string' ? d.notes : ''
+    };
   }
 
   // ---------- Form rendering ----------
@@ -1765,7 +1806,15 @@ const ReadMe = (() => {
     // Don't redraw a form that is being typed into (it would reset the cursor).
     const typing = sameTarget && document.activeElement && $('form').contains(document.activeElement);
     if (!dirty && !typing) {
-      form = m.spec ? formFromSpec(m.spec) : emptyForm(m.me);
+      if (m.draft) {
+        // The plugin was closed with unsaved edits on this section: bring them back.
+        form = formFromDraft(m.draft);
+        dirty = true;
+        $('draftBanner').classList.add('show');
+      } else {
+        form = m.spec ? formFromSpec(m.spec) : emptyForm(m.me);
+        $('draftBanner').classList.remove('show');
+      }
       renderForm();
     }
 
@@ -1785,6 +1834,8 @@ const ReadMe = (() => {
   function save() {
     if (!editing || saving) return;
     saving = true;
+    clearTimeout(draftTimer);
+    $('draftBanner').classList.remove('show');
     renderFooter();
     send({ f: 'readme', type: 'save', id: editing.id, spec: collect() });
   }
@@ -1901,12 +1952,23 @@ const ReadMe = (() => {
   $('notes').oninput = () => { form.notes = $('notes').value; markDirty(); };
   $('save').onclick = save;
   $('goBack').onclick = () => { if (editing) send({ f: 'readme', type: 'goto', id: editing.id }); };
-  $('discard').onclick = () => { dirty = false; editing = null; render(lastState); send({ f: 'readme', type: 'refresh' }); };
+  $('discard').onclick = () => {
+    if (editing) dropDraft(editing.id);
+    dirty = false; editing = null; render(lastState); send({ f: 'readme', type: 'refresh' });
+  };
+  $('dropDraft').onclick = () => {
+    if (!editing) return;
+    dropDraft(editing.id);
+    dirty = false;
+    lastState.draft = null;
+    editing = null;
+    render(lastState);
+  };
   $('remove').onclick = () => $('confirm').classList.add('show');
   $('cancelRemove').onclick = () => $('confirm').classList.remove('show');
   $('confirmRemove').onclick = () => {
     $('confirm').classList.remove('show');
-    if (editing) { dirty = false; send({ f: 'readme', type: 'remove', id: editing.id }); }
+    if (editing) { dropDraft(editing.id); dirty = false; send({ f: 'readme', type: 'remove', id: editing.id }); }
   };
   $('scanAll').onclick = () => {
     $('scanAll').textContent = t().scanning;
@@ -1972,6 +2034,9 @@ const Note = (() => {
       staleText: (n) => 'You left “' + n + '” without saving. Go back to it, or discard the changes. Saving here still writes to “' + n + '”.',
       goBack: (n) => 'Go back to “' + n + '”',
       discard: 'Discard changes',
+      draftTitle: 'Unsaved changes restored',
+      draftText: 'The plugin was closed before you saved (for example by clicking into a widget). Your changes are back; save them or drop them.',
+      dropDraft: 'Drop these changes',
       ovCounts: (f, n) => '<b>' + f + '</b> ' + (f === 1 ? 'frame' : 'frames') + ' · <b>' + n + '</b> ' + (n === 1 ? 'note' : 'notes'),
       ovHint: 'Notes on the current page are refreshed every time you open this tab. Other pages show their last known state.',
       orphans: 'Frame deleted', orphanSub: 'Card left behind on this page',
@@ -2011,6 +2076,9 @@ const Note = (() => {
       staleText: (n) => '“' + n + '” frame’inden kaydetmeden çıktın. Geri dönebilir ya da değişiklikleri atabilirsin. Buradan kaydedersen yine “' + n + '” için kaydedilir.',
       goBack: (n) => '“' + n + '” frame’ine dön',
       discard: 'Değişiklikleri at',
+      draftTitle: 'Kaydedilmemiş değişiklikler geri yüklendi',
+      draftText: 'Plugin sen kaydetmeden kapandı (örneğin bir widget’a tıklandığında). Değişikliklerin geri geldi; kaydedebilir ya da atabilirsin.',
+      dropDraft: 'Bu değişiklikleri at',
       ovCounts: (f, n) => '<b>' + f + '</b> frame · <b>' + n + '</b> not',
       ovHint: 'Bulunduğun sayfadaki notlar bu sekmeyi her açtığında yenilenir. Diğer sayfalar bilinen son durumu gösterir.',
       orphans: 'Frame’i silinmiş', orphanSub: 'Bu sayfada sahipsiz kalan kart',
@@ -2041,6 +2109,26 @@ const Note = (() => {
 
   function markDirty() {
     if (!dirty) { dirty = true; renderFooter(); }
+    scheduleDraft();
+  }
+
+  // Unsaved edits are kept as a draft by code.js, so they come back if the plugin gets closed
+  // (Figma closes a running plugin when someone clicks into a widget, for example).
+  let draftTimer = null;
+  function scheduleDraft() {
+    clearTimeout(draftTimer);
+    if (multi) {
+      const ids = multi.ids, text = $('bulk').value;
+      draftTimer = setTimeout(() => send({ f: 'note', type: 'draft', ids, data: text.trim() ? { text } : null }), 400);
+    } else if (editing) {
+      const id = editing.id;
+      draftTimer = setTimeout(() => send({ f: 'note', type: 'draft', id, data: { paras: form.paras } }), 400);
+    }
+  }
+  function dropDraft(id) {
+    clearTimeout(draftTimer);
+    if (id) send({ f: 'note', type: 'draft', id, data: null });
+    $('draftBanner').classList.remove('show');
   }
 
   function grow(ta) {
@@ -2170,7 +2258,16 @@ const Note = (() => {
     // Don't redraw a form that is being typed into (it would reset the cursor).
     const typing = sameTarget && document.activeElement && $('form').contains(document.activeElement);
     if (!dirty && !typing) {
-      form = formFromNote(m.note);
+      const paras = m.draft && Array.isArray(m.draft.paras) ? m.draft.paras.filter((p) => p && typeof p.text === 'string') : null;
+      if (paras && paras.length) {
+        // The plugin was closed with unsaved edits on this frame: bring them back.
+        form = { paras: paras.map((p) => ({ id: p.id || null, text: p.text, by: p.by || null, at: p.at || null })) };
+        dirty = true;
+        $('draftBanner').classList.add('show');
+      } else {
+        form = formFromNote(m.note);
+        $('draftBanner').classList.remove('show');
+      }
       renderParas();
     }
     renderFooter();
@@ -2179,6 +2276,10 @@ const Note = (() => {
   // ---------- Multiple frames ----------
 
   function renderMulti(m) {
+    if (!$('bulk').value && m.draft && typeof m.draft.text === 'string') {
+      $('bulk').value = m.draft.text;
+      grow($('bulk'));
+    }
     $('multiIco').innerHTML = ICONS.Frames;
     $('multiName').textContent = t().multiName(m.frames.length);
     const outside = m.frames.filter((f) => !f.section).length;
@@ -2204,6 +2305,8 @@ const Note = (() => {
 
   function save() {
     if (saving || $('save').disabled) return;
+    clearTimeout(draftTimer);
+    $('draftBanner').classList.remove('show');
     if (multi) {
       saving = true;
       renderFooter();
@@ -2328,15 +2431,26 @@ const Note = (() => {
     markDirty();
     renderParas(form.paras.length - 1);
   };
-  $('bulk').oninput = () => { grow($('bulk')); renderFooter(); };
+  $('bulk').oninput = () => { grow($('bulk')); renderFooter(); scheduleDraft(); };
   $('save').onclick = save;
   $('goBack').onclick = () => { if (editing) send({ f: 'note', type: 'goto', id: editing.id }); };
-  $('discard').onclick = () => { dirty = false; editing = null; render(lastState); send({ f: 'note', type: 'refresh' }); };
+  $('discard').onclick = () => {
+    if (editing) dropDraft(editing.id);
+    dirty = false; editing = null; render(lastState); send({ f: 'note', type: 'refresh' });
+  };
+  $('dropDraft').onclick = () => {
+    if (!editing) return;
+    dropDraft(editing.id);
+    dirty = false;
+    lastState.draft = null;
+    editing = null;
+    render(lastState);
+  };
   $('remove').onclick = () => $('confirm').classList.add('show');
   $('cancelRemove').onclick = () => $('confirm').classList.remove('show');
   $('confirmRemove').onclick = () => {
     $('confirm').classList.remove('show');
-    if (editing) { dirty = false; send({ f: 'note', type: 'remove', id: editing.id }); }
+    if (editing) { dropDraft(editing.id); dirty = false; send({ f: 'note', type: 'remove', id: editing.id }); }
   };
   $('deleteOrphan').onclick = () => { if (lastState.orphan) send({ f: 'note', type: 'deleteOrphan', id: lastState.orphan.id }); };
   $('scanAll').onclick = () => {

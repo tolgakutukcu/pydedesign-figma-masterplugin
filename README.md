@@ -12,6 +12,8 @@ The Pyde Design team's Figma tools in one plugin:
 
 Run **Plugins → Pyde Design → Pyde Design** to get the list of tools, or pick a tool from the same menu to open the plugin straight on it. The **Edit Design ReadMe** and **Edit Frame Note** buttons in the right panel open it on that tool too.
 
+Figma runs only one plugin or widget at a time: clicking into a widget (to copy its text, for example) closes this plugin. Unsaved Frame Note and Design ReadMe edits are kept as a draft on your computer while you type, so when you open the plugin again on the same frame or section, they come back with a "restored" notice. Save them, or drop them with **Drop these changes**. Drafts older than a week are removed.
+
 The interface can be switched between English and Turkish in Settings (the gear in the top bar). That only changes the interface for you; the cards on the canvas stay in English.
 
 ## Install
