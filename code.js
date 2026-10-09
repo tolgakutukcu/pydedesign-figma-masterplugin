@@ -938,7 +938,7 @@ const Note = (() => {
 
   // A fingerprint of everything the card shows, so a card is only redrawn when something changed
   // (an edit, a rename, an undo, or a copied card that now belongs to a new frame).
-  const CARD_LAYOUT = 3; // bump when the card's design changes, so existing cards are redrawn
+  const CARD_LAYOUT = 4; // bump when the card's design changes, so existing cards are redrawn
   function revision(frame, data) {
     const s = CARD_LAYOUT + '|' + frame.id + '|' + frame.name + '|' + JSON.stringify(data.entries);
     let h = 0;
@@ -997,7 +997,7 @@ const Note = (() => {
   }
 
   // Layout by Tolga (DM Sans): the notes on the sticky paper; below them a slightly darker strip with
-  // the frame's name and node id, a line for developers / AI agents and a warning for designers.
+  // the frame's name and node id and a line for developers / AI agents.
   function renderCard(card, frame, data) {
     for (const c of card.children.slice()) c.remove();
 
@@ -1049,8 +1049,6 @@ const Note = (() => {
     id.textAutoResize = 'WIDTH_AND_HEIGHT';
     put(foot, text('For developers & AI agents: requirements for the frame above (node ' + frame.id + ').',
       'regular', 10, 'tertiary', 'About'));
-    put(foot, text('⚠️ Designers: Do not copy this note directly. Use Pyde Design plugin.',
-      'medium', 10, 'warn', 'Designer warning'));
   }
 
   // Covers a broken card with a red warning (absolutely positioned, so it doesn't change the card's
@@ -1256,6 +1254,22 @@ const Note = (() => {
       const f = frames.find((fr) => !owner.has(fr.id) && fr.parent.id === card.parent.id && isBelow(card, fr));
       if (f) owner.set(f.id, card); else pending.push(card);
     }
+    // 1b. A card placed right below a frame that has no note gives it one: copying a card under the
+    //     next frame makes it that frame's note.
+    const adopted = new Set();
+    for (const card of pending.slice()) {
+      if (!card.parent) continue;
+      const f = card.parent.children.find((c) => c.id !== card.id && !owner.has(c.id) && !isCard(c) &&
+        isFrame(c) && canHost(c) && isBelow(card, c));
+      if (!f) continue;
+      const entries = await cardEntries(card);
+      if (!entries.length) continue;
+      writeNote(f, { v: 1, entries });
+      if (frames.indexOf(f) === -1) frames.push(f);
+      owner.set(f.id, card);
+      adopted.add(card.id);
+      pending.splice(pending.indexOf(card), 1);
+    }
     // 2. Otherwise by the frame id stored on the card (the frame moved while the plugin was closed).
     //    A second card for a frame that already has one is a copy.
     const lost = [];
@@ -1288,6 +1302,16 @@ const Note = (() => {
       let data = readNote(frame);
       const card = owner.get(frame.id);
       if (!card) continue;
+      // A card that names another frame was copied under this one: what the card shows becomes the
+      // note (a frame copied on its own may still carry old note data that nobody can see).
+      const named = cardInfo(card).targetId;
+      if (named && named !== frame.id && !adopted.has(card.id)) {
+        const entries = await cardEntries(card);
+        if (entries.length && JSON.stringify(entries) !== JSON.stringify(data.entries)) {
+          data = { v: 1, entries };
+          writeNote(frame, data);
+        }
+      }
       const edited = handEdits(card, data);
       if (edited) {
         // The card already shows the new text: only the data (and the card's record of it) change.
