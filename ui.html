@@ -1247,7 +1247,7 @@
     </main>
 
     <footer class="f-foot">
-      <div class="info"></div>
+      <button class="btn" id="fl-reset" data-i18n="reset"></button>
       <div class="foot-actions">
         <button class="btn ghost-danger" id="fl-remove" data-i18n="remove"></button>
         <button class="btn primary" id="fl-connect"></button>
@@ -1369,7 +1369,7 @@
 
 <script>
 // Only this plugin as a whole has a version; the tools inside it don't.
-const VERSION = '2.0.1';
+const VERSION = '2.0.2';
 const REPO = 'tolgakutukcu/pydedesign-figma-masterplugin';
 const RAW = 'https://raw.githubusercontent.com/' + REPO + '/main/';
 const VERSION_URL = RAW + 'version.json';
@@ -3979,7 +3979,7 @@ const Flows = (() => {
       same: 'From and To must be different layers.',
       counts: (n, p) => '<b>' + n + '</b> ' + (n === 1 ? 'arrow' : 'arrows') + ' on “' + p + '”',
       none: 'No arrows on this page yet.', brokenList: 'Broken arrows', brokenSub: 'An end was deleted',
-      deleteArrow: 'Delete'
+      deleteArrow: 'Delete', reset: 'Reset'
     },
     tr: {
       back: 'Geri', appTitle: 'Akış Oluşturucu', tabMain: 'Ok', tabOverview: 'Genel bakış',
@@ -3995,7 +3995,7 @@ const Flows = (() => {
       same: 'Nereden ve Nereye farklı katmanlar olmalı.',
       counts: (n, p) => '“' + p + '” sayfasında <b>' + n + '</b> ok',
       none: 'Bu sayfada henüz ok yok.', brokenList: 'Bozuk oklar', brokenSub: 'Bir ucu silinmiş',
-      deleteArrow: 'Sil'
+      deleteArrow: 'Sil', reset: 'Sıfırla'
     }
   };
 
@@ -4037,6 +4037,7 @@ const Flows = (() => {
     $('connect').disabled = busy || !form.from || !form.to || same;
     $('remove').style.display = editing ? '' : 'none';
     $('remove').disabled = busy;
+    $('reset').disabled = busy || (!form.from && !form.to && !$('label').value && !editing && focus === 'from');
   }
 
   function reset() {
@@ -4061,16 +4062,26 @@ const Flows = (() => {
     const sig = nodes.map((n) => n.id).join(',');
     if (sig === lastSel) return render();
     lastSel = sig;
-    if (!nodes.length) return render();
-    // Selecting something else after editing an arrow starts a new one, unless a field is being picked.
+    // Leaving an arrow (selecting nothing, or something else) ends editing it, unless a field is being picked.
     if (editing && !focus) reset();
-    if (nodes.length === 2 && (focus === 'from' || (!form.from && !form.to))) {
+    if (!nodes.length) return render();
+
+    const other = (k) => form[k === 'from' ? 'to' : 'from'];
+    const known = nodes.find((n) => (form.from && n.id === form.from.id) || (form.to && n.id === form.to.id));
+    if (nodes.length === 2 && !(focus && known)) {
+      // Two new layers: both fields (left / top one first).
       form.from = nodes[0];
       form.to = nodes[1];
       focus = null;
     } else if (focus) {
-      form[focus] = nodes[0];
-      focus = focus === 'from' && !form.to ? 'to' : null;
+      // One new layer, or a second one shift-selected next to the one already chosen: it goes into the
+      // waiting field, never the layer already in the other field.
+      const o = other(focus);
+      const pick = nodes.find((n) => !o || n.id !== o.id);
+      if (pick) {
+        form[focus] = pick;
+        focus = focus === 'from' && !form.to ? 'to' : null;
+      }
     }
     render();
   }
@@ -4169,6 +4180,9 @@ const Flows = (() => {
   $('connect').onclick = submit;
   $('remove').onclick = () => { if (editing && !busy) { busy = true; render(); send({ f: 'flows', type: 'remove', id: editing.id }); } };
   $('newArrow').onclick = () => { reset(); lastSel = ''; render(); };
+  // Clears both ends and the label (and leaves an arrow being edited, without changing it).
+  $('reset').onclick = () => { reset(); render(); };
+  $('label').oninput = render;
   $('label').onkeydown = (e) => { if (e.key === 'Enter') submit(); };
   root.querySelectorAll('.tabs button').forEach((b) => { b.onclick = () => setView(b.dataset.view); });
   render();
