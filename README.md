@@ -8,6 +8,7 @@ The Pyde Design team's Figma tools in one plugin:
 | **Design ReadMe** (*Tasarım Künyesi*) | Status, owners, Jira / Slack links and notes on a section, drawn as a yellow card inside it. |
 | **Frame Note** (*Frame Notu*) | Designer notes drawn as a yellow card right below a frame. |
 | **Title Maker** (*Başlık Ekleyici*) | Adds a title bar above selected frames, pushes the content below down and lines the frames up. |
+| **Flow Maker** (*Akış Oluşturucu*) | Arrows from one screen (or a button in it) to another, with an optional label; readable by AI. |
 | **Image Optimizer** | Shrinks oversized images to the pixel size they are displayed at (2x / 3x / 4x). |
 
 Run **Plugins → Pyde Design → Pyde Design** to get the list of tools, or pick a tool from the same menu to open the plugin straight on it. The **Edit Design ReadMe** and **Edit Frame Note** buttons in the right panel open it on that tool too.
@@ -134,6 +135,24 @@ The card appears right below the frame, exactly as wide as the frame, in the sam
 
 The title is a frame named `🏷 Title` with one text layer: DM Sans Semi Bold 34 / 36 in white on a `#7B7D83` → `#5C5E66` gradient (top to bottom), with a 1 px white stroke fading from 40% at the top to 0 at the bottom and 8 px corners. Edit its text on the canvas like any other text; copying a title is fine.
 
+## Flow Maker
+
+Connects two layers with an arrow: **From** and **To** can be frames, or any object inside them (a button, a row…).
+
+- Selecting a layer on the canvas fills the field that is waiting (the highlighted one): first **From**, then **To**. Selecting two layers fills both (left / top one first). Click a field to choose it again; ⇅ swaps them.
+- Add a **Label** if you like (e.g. "Tap Continue") and click **Connect**.
+- Selecting an arrow opens it for editing: change its ends or label and **Save changes**, or **Delete** it. **New arrow** starts over.
+
+The arrow (Pyde blue, 3 px, open arrowhead, label in a blue pill) goes from edge to edge: right to left when the ends are side by side, bottom to top when one is above the other, bending at right angles when they don't line up. It is a group named after what it connects, with node ids, so Figma MCP / Claude can read the flow:
+
+```
+➜ Flow: Login › Continue (12:40) → Home (56:78) · "Tap Continue"
+```
+
+While the plugin is open (on any tool), arrows are redrawn when one of their ends moves, resizes or is renamed, and **Tidy up section** / lining up frames redraws them too. If an end is deleted, the arrow turns red and dashed (`➜ Flow (broken): …`) and is listed under **Broken arrows** in the **Overview** tab, where it can be deleted. The **Overview** lists all arrows on the current page.
+
+Figma doesn't let plugins create the FigJam-style connectors in design files, which is why the plugin draws its own arrows.
+
 ## Image Optimizer
 
 1. **Save a version first** (File → Save to version history).
@@ -168,4 +187,9 @@ placed right below the frame in the same section (or on the page, if the frame i
 ## Figma titles
 Layers named "🏷 Title" are headings for the frames right below them (their text is the name of that
 group of screens). They are labels, not UI to implement.
+
+## Figma flows
+Layers named "➜ Flow: A (node id) → B (node id) · "label"" are navigation arrows: acting on A (a screen, or an
+element in it such as a button) leads to screen B; the label says what triggers it. Use them to wire up navigation.
+They are annotations, not UI to implement. "➜ Flow (broken): …" arrows are leftovers; ignore them.
 ```

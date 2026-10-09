@@ -206,7 +206,8 @@
   body[data-screen="readme"] #s-readme,
   body[data-screen="note"] #s-note,
   body[data-screen="images"] #s-images,
-  body[data-screen="titles"] #s-titles { display: flex; }
+  body[data-screen="titles"] #s-titles,
+  body[data-screen="flows"] #s-flows { display: flex; }
 
   .f-head { flex: none; padding: 10px 16px 0 10px; border-bottom: 1px solid var(--figma-color-border); }
   .f-title { display: flex; align-items: center; gap: 6px; min-height: 28px; padding-bottom: 10px; }
@@ -508,6 +509,33 @@
   .check b { display: block; font-weight: 600; }
   .check small { display: block; margin-top: 2px; font-size: 11px; color: var(--figma-color-text-secondary); }
 
+  /* ---------- Flow Maker ---------- */
+  #s-flows .view { display: none; }
+  #s-flows.view-main #fl-main, #s-flows.view-overview #fl-overview { display: block; }
+  #s-flows.view-main .f-foot { display: flex; }
+  #s-flows .pick {
+    display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 11px; border-radius: 10px; text-align: left; cursor: pointer;
+    border: 1px dashed var(--figma-color-border-strong); background: var(--figma-color-bg);
+  }
+  #s-flows .pick.set { border-style: solid; border-color: var(--figma-color-border); background: var(--figma-color-bg-secondary); }
+  #s-flows .pick.focus { border: 1.5px solid var(--figma-color-text); background: var(--figma-color-bg); }
+  #s-flows .pick .meta { flex: 1; min-width: 0; }
+  #s-flows .pick .f-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #s-flows .pick:not(.set) .f-name { font-weight: 500; color: var(--figma-color-text-tertiary); }
+  #s-flows .pick .f-sub { font-size: 11px; color: var(--figma-color-text-secondary); }
+  #s-flows .pick .f-sub:empty { display: none; }
+  #s-flows .pick-hint { font-size: 11px; color: var(--figma-color-text); margin-top: 6px; font-weight: 500; }
+  #s-flows .pick-hint:empty { display: none; }
+  #s-flows .swap-row { display: flex; justify-content: center; margin: 4px 0 -8px; }
+  #s-flows .a-dot { flex: none; width: 16px; height: 16px; color: #4261EE; transform: rotate(-90deg); }
+  #s-flows .a-dot svg { width: 16px; height: 16px; display: block; }
+  #s-flows .entry.broken { border-color: rgba(229, 72, 77, .45); background: rgba(229, 72, 77, .08); }
+  #s-flows .entry.broken .a-dot { color: var(--danger); }
+  #s-flows .counts { color: var(--figma-color-text-secondary); }
+  #s-flows .counts b { color: var(--figma-color-text); }
+  #s-flows .banner { margin: 0 0 12px; }
+  #s-flows .banner .actions { margin-top: 6px; }
+
   /* Design ReadMe: tidy up the section */
   #s-readme .fit-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
   #s-readme .fit-row .hint { margin: 0; }
@@ -685,6 +713,11 @@
       <button class="tool" data-go="titles">
         <span class="t-ico"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="2.5" width="15" height="4.5" rx="1.2"/><rect x="2.5" y="10" width="6.5" height="7.5" rx="1"/><rect x="11" y="10" width="6.5" height="7.5" rx="1"/></svg></span>
         <span class="t-meta"><b data-i18n="titlesName"></b><span data-i18n="titlesDesc"></span></span>
+        <svg class="chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3l5 5-5 5"/></svg>
+      </button>
+      <button class="tool" data-go="flows">
+        <span class="t-ico"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="5" height="8" rx="1"/><rect x="13" y="8" width="5" height="8" rx="1"/><path d="M7 8h3v4h2.5M10.5 10.5l2 1.5-2 1.5"/></svg></span>
+        <span class="t-meta"><b data-i18n="flowsName"></b><span data-i18n="flowsDesc"></span></span>
         <svg class="chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3l5 5-5 5"/></svg>
       </button>
       <button class="tool" data-go="images">
@@ -1165,6 +1198,63 @@
     </footer>
   </div>
 
+  <!-- ==================== Flow Maker ==================== -->
+  <div class="screen feature view-main" id="s-flows">
+    <div class="f-head">
+      <div class="f-title">
+        <button class="icon-btn back" data-i18n-title="back"></button>
+        <h1 data-i18n="appTitle"></h1>
+      </div>
+      <nav class="tabs">
+        <button data-view="main" class="on" data-i18n="tabMain"></button>
+        <button data-view="overview" data-i18n="tabOverview"></button>
+      </nav>
+    </div>
+
+    <main class="scroll">
+      <section class="view" id="fl-main">
+        <div class="banner info" id="fl-editBanner">
+          <b data-i18n="editing"></b>
+          <div class="actions"><button class="btn small" id="fl-newArrow" data-i18n="newArrow"></button></div>
+        </div>
+        <div class="banner" id="fl-brokenBanner">
+          <b data-i18n="brokenTitle"></b>
+          <span data-i18n="brokenText"></span>
+        </div>
+
+        <div class="lbl" data-i18n="from"></div>
+        <button class="pick" id="fl-from"><div class="meta"><div class="f-name"></div><div class="f-sub"></div></div></button>
+        <div class="pick-hint" id="fl-fromHint"></div>
+
+        <div class="swap-row"><button class="icon-btn" id="fl-swap" data-i18n-title="swap"></button></div>
+
+        <div class="lbl" data-i18n="to"></div>
+        <button class="pick" id="fl-to"><div class="meta"><div class="f-name"></div><div class="f-sub"></div></div></button>
+        <div class="pick-hint" id="fl-toHint"></div>
+        <div class="hint" id="fl-sameHint" data-i18n="same" style="display: none"></div>
+
+        <div class="field">
+          <div class="lbl" data-i18n="labelLbl"></div>
+          <input class="input" id="fl-label" data-i18n-placeholder="labelPh">
+        </div>
+        <div class="hint" data-i18n="about"></div>
+      </section>
+
+      <section class="view" id="fl-overview">
+        <div class="counts" id="fl-counts"></div>
+        <div id="fl-list"></div>
+      </section>
+    </main>
+
+    <footer class="f-foot">
+      <div class="info"></div>
+      <div class="foot-actions">
+        <button class="btn ghost-danger" id="fl-remove" data-i18n="remove"></button>
+        <button class="btn primary" id="fl-connect"></button>
+      </div>
+    </footer>
+  </div>
+
   <!-- ==================== Settings ==================== -->
   <div class="settings">
     <div class="s-head">
@@ -1279,13 +1369,13 @@
 
 <script>
 // Only this plugin as a whole has a version; the tools inside it don't.
-const VERSION = '1.9.1';
+const VERSION = '2.0.0';
 const REPO = 'tolgakutukcu/pydedesign-figma-masterplugin';
 const RAW = 'https://raw.githubusercontent.com/' + REPO + '/main/';
 const VERSION_URL = RAW + 'version.json';
 document.getElementById('download').href = 'https://github.com/' + REPO + '/archive/refs/heads/main.zip';
 
-const TOOLS = ['checklist', 'readme', 'note', 'images', 'titles'];
+const TOOLS = ['checklist', 'readme', 'note', 'images', 'titles', 'flows'];
 const X = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 2l6 6M8 2l-6 6"/></svg>';
 const BACK = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3L5 8l5 5"/></svg>';
 const POINTER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M5 3l14 7-6 2-2 6L5 3z"/></svg>';
@@ -1301,6 +1391,7 @@ const STRINGS = {
     noteName: 'Frame Note', noteDesc: 'Notes for developers, right below a frame.',
     imagesName: 'Image Optimizer', imagesDesc: 'Shrinks oversized images to the size they are shown at.',
     titlesName: 'Title Maker', titlesDesc: 'Adds a title above selected frames and lines them up.',
+    flowsName: 'Flow Maker', flowsDesc: 'Arrows from one screen (or button) to another.',
     homeHint: 'Every tool can also be opened directly from Plugins → Pyde Design.',
     updTitle: 'Update required',
     updText: 'A newer version of Pyde Design is available. Please download it to keep using its tools.',
@@ -1322,6 +1413,7 @@ const STRINGS = {
     noteName: 'Frame Notu', noteDesc: 'Developer’lar için notlar, frame’in hemen altında.',
     imagesName: 'Image Optimizer', imagesDesc: 'Büyük görselleri gösterildikleri boyuta küçültür.',
     titlesName: 'Başlık Ekleyici', titlesDesc: 'Seçili frame’lerin üstüne başlık ekler ve onları hizalar.',
+    flowsName: 'Akış Oluşturucu', flowsDesc: 'Bir ekrandan (ya da butondan) diğerine oklar.',
     homeHint: 'Her araç Plugins → Pyde Design menüsünden doğrudan da açılabilir.',
     updTitle: 'Güncelleme gerekli',
     updText: 'Pyde Design’ın daha yeni bir sürümü var. Araçları kullanmaya devam etmek için lütfen indir.',
@@ -3865,10 +3957,230 @@ const Titles = (() => {
 })();
 
 // =====================================================================================
+// Flow Maker
+// =====================================================================================
+
+const Flows = (() => {
+  const root = document.getElementById('s-flows');
+  const $ = (id) => document.getElementById('fl-' + id);
+
+  const S = {
+    en: {
+      back: 'Back', appTitle: 'Flow Maker', tabMain: 'Arrow', tabOverview: 'Overview',
+      from: 'From', to: 'To', pickFrom: 'Select where the arrow starts', pickTo: 'Select where the arrow goes',
+      pickHint: 'Select a frame, or an object inside one (a button…), on the canvas.',
+      empty: 'Click to choose',
+      inFrame: (f) => 'in “' + f + '”', frame: 'Frame', layer: 'Layer',
+      swap: 'Swap', labelLbl: 'Label (optional)', labelPh: 'e.g. Tap Continue',
+      about: 'The arrow follows its ends while the plugin is open, and its layer name tells developers and Claude what it connects.',
+      editing: 'Editing the selected arrow', newArrow: 'New arrow',
+      brokenTitle: 'This arrow is broken', brokenText: 'One of its ends was deleted. Choose a new end and save, or delete the arrow.',
+      connect: 'Connect', save: 'Save changes', remove: 'Delete',
+      same: 'From and To must be different layers.',
+      counts: (n, p) => '<b>' + n + '</b> ' + (n === 1 ? 'arrow' : 'arrows') + ' on “' + p + '”',
+      none: 'No arrows on this page yet.', brokenList: 'Broken arrows', brokenSub: 'An end was deleted',
+      deleteArrow: 'Delete'
+    },
+    tr: {
+      back: 'Geri', appTitle: 'Akış Oluşturucu', tabMain: 'Ok', tabOverview: 'Genel bakış',
+      from: 'Nereden', to: 'Nereye', pickFrom: 'Okun başlayacağı yeri seç', pickTo: 'Okun gideceği yeri seç',
+      pickHint: 'Canvas’ta bir frame ya da içindeki bir obje (buton vb.) seç.',
+      empty: 'Seçmek için tıkla',
+      inFrame: (f) => '“' + f + '” içinde', frame: 'Frame', layer: 'Katman',
+      swap: 'Yer değiştir', labelLbl: 'Etiket (opsiyonel)', labelPh: 'Örn. Devam’a basınca',
+      about: 'Ok, plugin açıkken uçlarını takip eder; katman adı da developer’lara ve Claude’a neyi neye bağladığını söyler.',
+      editing: 'Seçili ok düzenleniyor', newArrow: 'Yeni ok',
+      brokenTitle: 'Bu ok bozuk', brokenText: 'Uçlarından biri silinmiş. Yeni bir uç seçip kaydet ya da oku sil.',
+      connect: 'Bağla', save: 'Değişiklikleri kaydet', remove: 'Sil',
+      same: 'Nereden ve Nereye farklı katmanlar olmalı.',
+      counts: (n, p) => '“' + p + '” sayfasında <b>' + n + '</b> ok',
+      none: 'Bu sayfada henüz ok yok.', brokenList: 'Bozuk oklar', brokenSub: 'Bir ucu silinmiş',
+      deleteArrow: 'Sil'
+    }
+  };
+
+  const ARROW = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2.5v11M4 9.5l4 4 4-4"/></svg>';
+  const SWAP = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2.5v11M2.5 5L5 2.5 7.5 5M11 13.5v-11M8.5 11l2.5 2.5 2.5-2.5"/></svg>';
+  const t = () => S[lang];
+
+  // The arrow being made or edited. `focus` is the field the next canvas selection goes into.
+  let form = { from: null, to: null };
+  let focus = 'from';
+  let editing = null; // { id, broken } while a selected arrow is edited
+  let lastSel = '';   // the selection already used, so the same selection isn't applied twice
+  let busy = false;
+  let overview = null;
+
+  function sub(n) {
+    return n.frame ? t().inFrame(n.frame) : n.type === 'FRAME' ? t().frame : n.type ? t().layer : '';
+  }
+
+  function renderField(k) {
+    const n = form[k];
+    const el = $(k);
+    el.classList.toggle('focus', focus === k);
+    el.classList.toggle('set', !!n);
+    el.querySelector('.f-name').textContent = n ? n.name : t().empty;
+    el.querySelector('.f-sub').textContent = n ? sub(n) : '';
+    $(k + 'Hint').textContent = focus === k ? (k === 'from' ? t().pickFrom : t().pickTo) + ' — ' + t().pickHint : '';
+  }
+
+  function render() {
+    renderField('from');
+    renderField('to');
+    root.classList.toggle('editing', !!editing);
+    $('editBanner').classList.toggle('show', !!editing && !editing.broken);
+    $('brokenBanner').classList.toggle('show', !!(editing && editing.broken));
+    const same = form.from && form.to && form.from.id === form.to.id;
+    $('sameHint').style.display = same ? '' : 'none';
+    $('connect').textContent = editing ? t().save : t().connect;
+    $('connect').disabled = busy || !form.from || !form.to || same;
+    $('remove').style.display = editing ? '' : 'none';
+    $('remove').disabled = busy;
+  }
+
+  function reset() {
+    editing = null;
+    form = { from: null, to: null };
+    $('label').value = '';
+    focus = 'from';
+  }
+
+  function onState(m) {
+    if (m.arrow) {
+      // A selected arrow opens for editing, unless a field is waiting for a new end.
+      if (focus && editing && editing.id === m.arrow.id) return render();
+      editing = { id: m.arrow.id, broken: m.arrow.broken };
+      form = { from: { id: m.arrow.from, name: m.arrow.fromName }, to: { id: m.arrow.to, name: m.arrow.toName } };
+      $('label').value = m.arrow.label;
+      focus = null;
+      lastSel = 'arrow:' + m.arrow.id;
+      return render();
+    }
+    const nodes = m.selection || [];
+    const sig = nodes.map((n) => n.id).join(',');
+    if (sig === lastSel) return render();
+    lastSel = sig;
+    if (!nodes.length) return render();
+    // Selecting something else after editing an arrow starts a new one, unless a field is being picked.
+    if (editing && !focus) reset();
+    if (nodes.length === 2 && (focus === 'from' || (!form.from && !form.to))) {
+      form.from = nodes[0];
+      form.to = nodes[1];
+      focus = null;
+    } else if (focus) {
+      form[focus] = nodes[0];
+      focus = focus === 'from' && !form.to ? 'to' : null;
+    }
+    render();
+  }
+
+  function submit() {
+    if ($('connect').disabled) return;
+    busy = true;
+    render();
+    const msg = { from: form.from.id, to: form.to.id, label: $('label').value };
+    send(Object.assign({ f: 'flows', type: editing ? 'update' : 'create', id: editing && editing.id }, msg));
+  }
+
+  // ---------- Overview ----------
+
+  function renderOverview() {
+    if (!overview) return;
+    const o = overview;
+    $('counts').innerHTML = t().counts(o.arrows.length, o.page);
+    const list = $('list');
+    list.innerHTML = '';
+    const row = (name, subText, onclick) => {
+      const b = document.createElement('button');
+      b.className = 'entry';
+      b.innerHTML = '<span class="a-dot">' + ARROW + '</span><div class="meta"><div class="name"></div><div class="sub"></div></div>';
+      b.querySelector('.name').textContent = name;
+      b.querySelector('.sub').textContent = subText;
+      b.onclick = onclick;
+      return b;
+    };
+    if (o.broken.length) {
+      const h = document.createElement('div');
+      h.className = 'page-name';
+      h.textContent = t().brokenList;
+      list.append(h);
+      o.broken.forEach((x) => {
+        const r = row(x.name, t().brokenSub, () => { send({ f: 'flows', type: 'goto', id: x.id }); setView('main'); });
+        r.classList.add('broken');
+        const del = document.createElement('span');
+        del.className = 'btn small';
+        del.textContent = t().deleteArrow;
+        del.onclick = (e) => { e.stopPropagation(); send({ f: 'flows', type: 'remove', id: x.id }); setTimeout(() => send({ f: 'flows', type: 'overview' }), 50); };
+        r.append(del);
+        list.append(r);
+      });
+    }
+    if (!o.arrows.length && !o.broken.length) {
+      const d = document.createElement('div');
+      d.className = 'ov-empty';
+      d.textContent = t().none;
+      list.append(d);
+    }
+    const sections = [];
+    o.arrows.forEach((x) => { if (sections.indexOf(x.section) === -1) sections.push(x.section); });
+    sections.forEach((sec) => {
+      const h = document.createElement('div');
+      h.className = 'page-name';
+      h.textContent = sec || o.page;
+      list.append(h);
+      o.arrows.filter((x) => x.section === sec).forEach((x) => {
+        list.append(row(x.from + ' → ' + x.to, x.label ? '“' + x.label + '”' : '', () => { send({ f: 'flows', type: 'goto', id: x.id }); setView('main'); }));
+      });
+    });
+  }
+
+  function setView(v) {
+    root.classList.toggle('view-main', v === 'main');
+    root.classList.toggle('view-overview', v === 'overview');
+    root.querySelectorAll('.tabs button').forEach((b) => b.classList.toggle('on', b.dataset.view === v));
+    if (v === 'overview') send({ f: 'flows', type: 'overview' });
+  }
+
+  function applyLang() {
+    translate(root, t());
+    render();
+    renderOverview();
+  }
+
+  function onMessage(m) {
+    if (m.type === 'state') onState(m);
+    else if (m.type === 'overview') { overview = m; renderOverview(); }
+    else if (m.type === 'done' || m.type === 'error') {
+      busy = false;
+      if (m.type === 'done' && m.action === 'remove') reset();
+      render();
+      if (root.classList.contains('view-overview')) send({ f: 'flows', type: 'overview' });
+    }
+  }
+
+  // ---------- Events ----------
+
+  ['from', 'to'].forEach((k) => {
+    $(k).onclick = () => { focus = focus === k ? null : k; lastSel = ''; render(); };
+  });
+  $('swap').innerHTML = SWAP;
+  $('swap').onclick = () => { form = { from: form.to, to: form.from }; render(); };
+  $('connect').onclick = submit;
+  $('remove').onclick = () => { if (editing && !busy) { busy = true; render(); send({ f: 'flows', type: 'remove', id: editing.id }); } };
+  $('newArrow').onclick = () => { reset(); lastSel = ''; render(); };
+  $('label').onkeydown = (e) => { if (e.key === 'Enter') submit(); };
+  root.querySelectorAll('.tabs button').forEach((b) => { b.onclick = () => setView(b.dataset.view); });
+  render();
+
+  return { applyLang, onMessage, save: submit };
+})();
+
+// =====================================================================================
 // Shell: navigation, language, version check
 // =====================================================================================
 
-const MODULES = { checklist: Checklist, readme: ReadMe, note: Note, images: Images, titles: Titles };
+const MODULES = { checklist: Checklist, readme: ReadMe, note: Note, images: Images, titles: Titles, flows: Flows };
 const $ = (id) => document.getElementById(id);
 
 // Shows the home screen (null) or a tool, and tells code.js which tool is on screen.
@@ -3969,6 +4281,7 @@ document.addEventListener('keydown', (e) => {
   if (screen === 'readme') ReadMe.save();
   else if (screen === 'note') Note.save();
   else if (screen === 'titles') Titles.save();
+  else if (screen === 'flows') Flows.save();
 });
 
 onmessage = (e) => {

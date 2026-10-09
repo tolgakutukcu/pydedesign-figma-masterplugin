@@ -5,6 +5,7 @@
 //  - Frame Note             designer notes drawn as a card right below a frame
 //  - Image Optimizer        shrinks oversized images to the size they are displayed at
 //  - Title Maker            adds a title bar above selected frames and lines them up
+//  - Flow Maker             arrows that connect screens (or objects in them), readable by AI
 //
 // Every tool is also in the plugin's menu (manifest `menu`); picking one there opens this plugin
 // straight on that tool (figma.command). The tools keep the storage keys of the separate plugins
@@ -17,7 +18,7 @@ const SIZE = { width: 360, height: 600 };
 const COLLAPSED = { width: 200, height: 52 }; // just the top bar, for keeping the plugin open on the side
 figma.showUI(__html__, { width: SIZE.width, height: SIZE.height, themeColors: true });
 
-const TOOLS = ['checklist', 'readme', 'note', 'images', 'titles'];
+const TOOLS = ['checklist', 'readme', 'note', 'images', 'titles', 'flows'];
 const LANG_KEY = 'pyde-lang';
 const ADMIN_KEY = 'pyde-admin-token';
 let lang = 'en';
@@ -1948,6 +1949,349 @@ const Images = (() => {
 })();
 
 // =====================================================================================
+// Flow Maker ("Akış Oluşturucu"): arrows that show how screens lead to each other.
+//
+// An arrow connects two layers: frames, or any object inside them (a button, a row…). It is a group
+// holding the arrow's vector and, optionally, a label. Its layer name says what it connects, with node
+// ids, so Figma MCP / Claude can read the flow:
+//     ➜ Flow: Login › Continue (12:40) → Home (56:78) · "Tap Continue"
+// The connection is stored on the group (shared plugin data). While the plugin is open, arrows are
+// redrawn whenever one of their ends moves; Tidy up section redraws them too. An arrow whose end is gone
+// turns red and dashed, and is listed in the overview.
+// =====================================================================================
+
+const Flows = (() => {
+  const NS = 'pydeflow'; // namespace may only contain letters and digits
+  const KEY = 'flow';
+  const PREFIX = '➜ Flow: ';
+  const BROKEN_PREFIX = '➜ Flow (broken): ';
+  const COLOR = '#4261EE';
+  const BROKEN_COLOR = '#E5484D';
+  const WEIGHT = 3;
+  const RADIUS = 16; // rounded corners of bent arrows
+
+  function isFlow(node) {
+    return node.type === 'GROUP' && node.getSharedPluginData(NS, KEY) !== '';
+  }
+  function flowOf(node) {
+    for (let n = node; n && n.type !== 'PAGE' && n.type !== 'DOCUMENT'; n = n.parent) if (isFlow(n)) return n;
+    return null;
+  }
+  function info(group) {
+    try { return JSON.parse(group.getSharedPluginData(NS, KEY)) || {}; } catch (e) { return {}; }
+  }
+  function flowsOn(page) {
+    return page.findAllWithCriteria({ types: ['GROUP'], sharedPluginData: { namespace: NS, keys: [KEY] } });
+  }
+
+  // ---------- Ends ----------
+
+  // The top-level layer an end sits in (directly in a section or on the page).
+  function topLevel(node) {
+    let top = node;
+    while (top.parent && top.parent.type !== 'SECTION' && top.parent.type !== 'PAGE') top = top.parent;
+    return top;
+  }
+  // What an end is called: "Login" for a frame, "Login › Continue" for an object inside it.
+  function endName(node) {
+    const top = topLevel(node);
+    return top.id === node.id ? node.name : top.name + ' › ' + node.name;
+  }
+  // Anything on the canvas can be an end, except sections, pages and the arrows themselves.
+  function validEnd(node) {
+    return !!node && !node.removed && node.type !== 'SECTION' && node.type !== 'PAGE' && node.type !== 'DOCUMENT' &&
+      !flowOf(node) && 'absoluteBoundingBox' in node && !!node.absoluteBoundingBox;
+  }
+  function describe(node) {
+    const top = topLevel(node);
+    return { id: node.id, name: node.name, frame: top.id === node.id ? null : top.name, type: node.type };
+  }
+
+  // The section (or page) both ends sit in; the arrow is drawn there.
+  function containerFor(a, b) {
+    const chain = (n) => { const out = []; for (let p = topLevel(n).parent; p; p = p.parent) { out.push(p); if (p.type === 'PAGE') break; } return out; };
+    const ca = chain(a), ids = new Set(chain(b).map((n) => n.id));
+    return ca.find((n) => ids.has(n.id)) || null;
+  }
+  function origin(container) {
+    return container.type === 'PAGE' ? { x: 0, y: 0 } : { x: container.absoluteTransform[0][2], y: container.absoluteTransform[1][2] };
+  }
+
+  // ---------- Route ----------
+
+  // The arrow's points (in the container's coordinates), from edge to edge:
+  //  - side by side: from the right (or left) edge middle of one to the facing edge middle of the other;
+  //  - one above the other: from the bottom (or top) edge middle to the facing edge middle;
+  //  - when they don't line up, the arrow bends at right angles halfway.
+  function route(a, b, o) {
+    const A = a.absoluteBoundingBox, B = b.absoluteBoundingBox;
+    const box = (r) => ({ l: r.x - o.x, t: r.y - o.y, r: r.x + r.width - o.x, b: r.y + r.height - o.y, cx: r.x + r.width / 2 - o.x, cy: r.y + r.height / 2 - o.y });
+    const p = box(A), q = box(B);
+    let s, e, horizontal = true;
+    if (q.l >= p.r) { s = { x: p.r, y: p.cy }; e = { x: q.l, y: q.cy }; }
+    else if (q.r <= p.l) { s = { x: p.l, y: p.cy }; e = { x: q.r, y: q.cy }; }
+    else if (q.t >= p.b) { s = { x: p.cx, y: p.b }; e = { x: q.cx, y: q.t }; horizontal = false; }
+    else if (q.b <= p.t) { s = { x: p.cx, y: p.t }; e = { x: q.cx, y: q.b }; horizontal = false; }
+    else { s = { x: p.r, y: p.cy }; e = { x: q.l, y: q.cy }; } // overlapping: right edge to left edge
+    const r = (n) => Math.round(n * 10) / 10;
+    s = { x: r(s.x), y: r(s.y) };
+    e = { x: r(e.x), y: r(e.y) };
+    if (horizontal ? Math.abs(s.y - e.y) < 0.5 : Math.abs(s.x - e.x) < 0.5) return [s, e];
+    if (horizontal) {
+      const mx = r((s.x + e.x) / 2);
+      return [s, { x: mx, y: s.y }, { x: mx, y: e.y }, e];
+    }
+    const my = r((s.y + e.y) / 2);
+    return [s, { x: s.x, y: my }, { x: e.x, y: my }, e];
+  }
+
+  // ---------- Drawing ----------
+
+  async function drawVector(points, container, broken) {
+    const v = figma.createVector();
+    container.appendChild(v);
+    const minX = Math.min.apply(null, points.map((p) => p.x));
+    const minY = Math.min.apply(null, points.map((p) => p.y));
+    await v.setVectorNetworkAsync({
+      vertices: points.map((p, i) => ({
+        x: p.x - minX, y: p.y - minY,
+        strokeCap: i === points.length - 1 ? 'ARROW_LINES' : 'ROUND',
+        cornerRadius: i && i < points.length - 1 ? RADIUS : 0
+      })),
+      segments: points.slice(1).map((p, i) => ({ start: i, end: i + 1 }))
+    });
+    v.x = minX;
+    v.y = minY;
+    v.name = 'Arrow';
+    v.strokes = [solid(broken ? BROKEN_COLOR : COLOR)];
+    v.strokeWeight = WEIGHT;
+    v.strokeJoin = 'ROUND';
+    v.dashPattern = broken ? [8, 6] : [];
+    v.fills = [];
+    return v;
+  }
+
+  // The label: a pill in the middle of the arrow's longest stretch.
+  function drawLabel(text, points, container, font, broken) {
+    const f = figma.createFrame();
+    container.appendChild(f);
+    f.name = 'Label';
+    f.layoutMode = 'HORIZONTAL';
+    f.primaryAxisSizingMode = 'AUTO';
+    f.counterAxisSizingMode = 'AUTO';
+    f.paddingTop = f.paddingBottom = 4;
+    f.paddingLeft = f.paddingRight = 10;
+    f.cornerRadius = 12;
+    f.fills = [solid(broken ? BROKEN_COLOR : COLOR)];
+    const tx = figma.createText();
+    tx.fontName = font;
+    tx.fontSize = 14;
+    tx.lineHeight = { unit: 'PIXELS', value: 20 };
+    tx.characters = text;
+    tx.fills = [solid('#FFFFFF')];
+    f.appendChild(tx);
+    let best = 0, at = 0;
+    for (let i = 1; i < points.length; i++) {
+      const d = Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y);
+      if (d > best) { best = d; at = i; }
+    }
+    const m = { x: (points[at - 1].x + points[at].x) / 2, y: (points[at - 1].y + points[at].y) / 2 };
+    f.x = Math.round(m.x - f.width / 2);
+    f.y = Math.round(m.y - f.height / 2);
+    return f;
+  }
+
+  function flowName(d, broken) {
+    return (broken ? BROKEN_PREFIX : PREFIX) + d.fromName + ' (' + d.from + ') → ' + d.toName + ' (' + d.to + ')' +
+      (d.label ? ' · “' + d.label + '”' : '');
+  }
+
+  // Draws (or redraws) an arrow. `group` is the existing arrow, or null for a new one.
+  async function render(group, d, from, to, broken) {
+    const container = broken ? group.parent : containerFor(from, to);
+    if (!container) throw new Error(t('Both ends must be on this page.', 'İki uç da bu sayfada olmalı.'));
+    const points = broken ? (d.points || []) : route(from, to, origin(container));
+    if (points.length < 2) return group;
+    const fonts = await loadCardFonts();
+    const parts = [await drawVector(points, container, broken)];
+    if (d.label) parts.push(drawLabel(d.label, points, container, fonts.medium, broken));
+    if (!group || group.removed) {
+      group = figma.group(parts, container);
+    } else {
+      const old = group.children.slice();
+      if (group.parent.id !== container.id) container.appendChild(group);
+      parts.forEach((p) => group.appendChild(p));
+      old.forEach((c) => c.remove());
+    }
+    const data = Object.assign({}, d, {
+      points, sig: JSON.stringify([points, d.label || '', !!broken]), broken: !!broken
+    });
+    group.name = flowName(data, broken);
+    group.setSharedPluginData(NS, KEY, JSON.stringify(data));
+    return group;
+  }
+
+  // ---------- Keeping arrows in place ----------
+
+  // Ends (and the top-level frames they sit in) of the arrows on this page: when one of them changes,
+  // the arrows are checked again.
+  let watchIds = new Set();
+
+  async function syncPage(page) {
+    const ids = new Set();
+    const broken = [];
+    for (const g of flowsOn(page)) {
+      const d = info(g);
+      const from = d.from ? await figma.getNodeByIdAsync(d.from) : null;
+      const to = d.to ? await figma.getNodeByIdAsync(d.to) : null;
+      const ok = validEnd(from) && validEnd(to) && pageOf(from) && pageOf(to) && pageOf(from).id === page.id && pageOf(to).id === page.id;
+      if (!ok) {
+        if (!d.broken) await render(g, d, null, null, true);
+        broken.push({ id: g.id, name: (d.fromName || '?') + ' → ' + (d.toName || '?') });
+        continue;
+      }
+      [from, to].forEach((n) => { ids.add(n.id); ids.add(topLevel(n).id); });
+      // Names follow renamed ends; the drawing is only redone when something actually moved.
+      const next = Object.assign({}, d, { fromName: endName(from), toName: endName(to) });
+      const container = containerFor(from, to);
+      const sig = container ? JSON.stringify([route(from, to, origin(container)), d.label || '', false]) : null;
+      if (d.broken || sig !== d.sig || (container && g.parent.id !== container.id)) await render(g, next, from, to, false);
+      else if (next.fromName !== d.fromName || next.toName !== d.toName) {
+        g.name = flowName(next, false);
+        g.setSharedPluginData(NS, KEY, JSON.stringify(next));
+      }
+    }
+    watchIds = ids;
+    return broken;
+  }
+
+  let timer = null, syncing = false, lastBroken = [];
+  function schedule() {
+    clearTimeout(timer);
+    timer = setTimeout(run, 200);
+  }
+  async function run() {
+    if (syncing) return schedule();
+    syncing = true;
+    try { lastBroken = await syncPage(figma.currentPage); } catch (e) { console.error('[Pyde Flow] sync failed', e); }
+    finally { syncing = false; }
+    if (active === 'flows') pushState();
+  }
+  function onNodeChange(e) {
+    for (const c of e.nodeChanges) {
+      if (c.type === 'DELETE' ? watchIds.has(c.id) : c.node && watchIds.has(c.node.id)) return schedule();
+    }
+  }
+  let watched = null;
+  function watchPage() {
+    if (watched) watched.off('nodechange', onNodeChange);
+    watched = figma.currentPage;
+    watched.on('nodechange', onNodeChange);
+  }
+
+  // ---------- State ----------
+
+  function pushState() {
+    const sel = figma.currentPage.selection;
+    const g = sel.length === 1 ? flowOf(sel[0]) : null;
+    if (g) {
+      const d = info(g);
+      return post('flows', {
+        type: 'state', arrow: { id: g.id, from: d.from, to: d.to, fromName: d.fromName, toName: d.toName, label: d.label || '', broken: !!d.broken }
+      });
+    }
+    // Up to two selected layers, left to right then top to bottom, for the From / To fields.
+    const nodes = sel.filter(validEnd).slice(0, 2).sort((a, b) =>
+      a.absoluteBoundingBox.x - b.absoluteBoundingBox.x || a.absoluteBoundingBox.y - b.absoluteBoundingBox.y);
+    post('flows', { type: 'state', arrow: null, selection: nodes.map(describe), invalid: sel.length > 0 && !nodes.length });
+  }
+
+  // ---------- Actions ----------
+
+  async function ends(msg) {
+    const from = msg.from ? await figma.getNodeByIdAsync(msg.from) : null;
+    const to = msg.to ? await figma.getNodeByIdAsync(msg.to) : null;
+    if (!validEnd(from) || !validEnd(to)) {
+      figma.notify(t('Select two layers to connect.', 'Bağlanacak iki katman seç.'), { error: true });
+      return null;
+    }
+    if (from.id === to.id) {
+      figma.notify(t('An arrow needs two different ends.', 'Okun iki ucu farklı olmalı.'), { error: true });
+      return null;
+    }
+    return { from, to };
+  }
+
+  async function create(msg) {
+    const e = await ends(msg);
+    if (!e) return;
+    const label = String(msg.label || '').trim();
+    const g = await render(null, { v: 1, from: e.from.id, to: e.to.id, fromName: endName(e.from), toName: endName(e.to), label }, e.from, e.to, false);
+    figma.currentPage.selection = [g];
+    figma.commitUndo();
+    await run();
+    figma.notify(t('Arrow added', 'Ok eklendi'));
+  }
+
+  async function update(msg) {
+    const g = msg.id ? await figma.getNodeByIdAsync(msg.id) : null;
+    if (!g || g.removed || !isFlow(g)) return figma.notify(t('The arrow no longer exists.', 'Ok artık yok.'), { error: true });
+    const e = await ends(msg);
+    if (!e) return;
+    const d = Object.assign({}, info(g), {
+      from: e.from.id, to: e.to.id, fromName: endName(e.from), toName: endName(e.to), label: String(msg.label || '').trim()
+    });
+    await render(g, d, e.from, e.to, false);
+    figma.commitUndo();
+    await run();
+    figma.notify(t('Arrow updated', 'Ok güncellendi'));
+  }
+
+  async function remove(msg) {
+    const g = msg.id ? await figma.getNodeByIdAsync(msg.id) : null;
+    if (g && !g.removed && isFlow(g)) g.remove();
+    figma.commitUndo();
+    await run();
+  }
+
+  async function sendOverview() {
+    lastBroken = await syncPage(figma.currentPage);
+    const brokenIds = new Set(lastBroken.map((b) => b.id));
+    post('flows', {
+      type: 'overview', page: figma.currentPage.name, broken: lastBroken,
+      arrows: flowsOn(figma.currentPage).filter((g) => !brokenIds.has(g.id)).map((g) => {
+        const d = info(g);
+        return { id: g.id, from: d.fromName, to: d.toName, label: d.label || '', section: g.parent.type === 'SECTION' ? g.parent.name : null };
+      })
+    });
+  }
+
+  async function goTo(id) {
+    const node = await figma.getNodeByIdAsync(id);
+    if (!node || node.removed) return figma.notify(t('That layer no longer exists.', 'Bu katman artık yok.'));
+    figma.currentPage.selection = [node];
+    figma.viewport.scrollAndZoomIntoView([node]);
+  }
+
+  async function onMessage(msg) {
+    if (msg.type === 'refresh') return pushState();
+    if (msg.type === 'overview') return sendOverview();
+    if (msg.type === 'goto') return goTo(msg.id);
+    const actions = { create, update, remove };
+    if (actions[msg.type]) {
+      await actions[msg.type](msg);
+      post('flows', { type: 'done', action: msg.type });
+      return pushState();
+    }
+  }
+
+  function start() { watchPage(); return run(); }
+  function onPageChange() { watchPage(); run(); }
+
+  return { start, onPageChange, activate: pushState, refresh: pushState, onMessage, isFlow, sync: run };
+})();
+
+// =====================================================================================
 // Title Maker ("Başlık Ekleyici"): adds a title bar above the selected frames and can line them up.
 // A selected title is recognised: its style can be brought up to date and its frames lined up.
 // It also tidies up a whole section ("Tidy up section"), which the Design ReadMe screen offers too.
@@ -1991,7 +2335,7 @@ const Titles = (() => {
     return node.type === 'FRAME' && node.getSharedPluginData('pydenote', 'card') !== '';
   }
   function isUnit(node) {
-    return UNIT_TYPES.indexOf(node.type) !== -1 && !isTitle(node) && !isReadmeCard(node) && !isNoteCard(node);
+    return UNIT_TYPES.indexOf(node.type) !== -1 && !isTitle(node) && !isReadmeCard(node) && !isNoteCard(node) && !Flows.isFlow(node);
   }
   function titleText(title) {
     const tx = title.children.find((c) => c.type === 'TEXT');
@@ -2221,6 +2565,7 @@ const Titles = (() => {
     title.y = top - GAP - title.height;
     setTitleWidth(title, width);
     if (parent.type === 'SECTION') growSection(parent);
+    if (msg.align) await Flows.sync();
     figma.currentPage.selection = [title];
     figma.commitUndo();
 
@@ -2264,6 +2609,7 @@ const Titles = (() => {
     const r = arrangeRows(units.map((u) => blockItem(makeBlock(u))), title.x, title.y + title.height + GAP);
     setTitleWidth(title, r.width);
     if (title.parent.type === 'SECTION') growSection(title.parent);
+    await Flows.sync();
     figma.commitUndo();
     figma.notify(t('Frames lined up', 'Frame’ler hizalandı'));
   }
@@ -2291,6 +2637,7 @@ const Titles = (() => {
     blocks.forEach((b) => b.nodes.forEach((n) => used.add(n.id)));
     titles.forEach((tl) => used.add(tl.id));
     if (readme) used.add(readme.id);
+    kids.filter(Flows.isFlow).forEach((g) => used.add(g.id)); // arrows are redrawn afterwards
     // Loose layers travel with the closest block.
     for (const c of kids) {
       if (used.has(c.id) || !blocks.length) continue;
@@ -2348,7 +2695,9 @@ const Titles = (() => {
       }
     })), PAD, top, GROUP_GAP);
 
-    const box = bbox(section.children);
+    await Flows.sync(); // the arrows follow their ends
+    const content = section.children.filter((c) => !Flows.isFlow(c));
+    const box = bbox(content.length ? content : section.children);
     section.resizeWithoutConstraints(Math.max(1, box.x + box.width + PAD), Math.max(1, box.y + box.height + PAD));
     figma.commitUndo();
     figma.notify(t('Section tidied up', 'Section düzenlendi'));
@@ -2527,14 +2876,15 @@ const Titles = (() => {
 // Router
 // =====================================================================================
 
-const MODULES = { checklist: Checklist, readme: ReadMe, note: Note, images: Images, titles: Titles };
+const MODULES = { checklist: Checklist, readme: ReadMe, note: Note, images: Images, titles: Titles, flows: Flows };
 
 figma.on('selectionchange', () => {
   if (MODULES[active]) MODULES[active].refresh();
 });
 figma.on('currentpagechange', () => {
-  Note.onPageChange(); // also refreshes the Frame Note screen when it is on
-  if (MODULES[active] && active !== 'note') MODULES[active].refresh();
+  Note.onPageChange();  // also refreshes the Frame Note screen when it is on
+  Flows.onPageChange(); // also refreshes the Flow Maker screen when it is on
+  if (MODULES[active] && active !== 'note' && active !== 'flows') MODULES[active].refresh();
 });
 
 figma.ui.onmessage = async (msg) => {
@@ -2544,7 +2894,8 @@ figma.ui.onmessage = async (msg) => {
       if (saved === 'en' || saved === 'tr') lang = saved;
       await loadDrafts();
       figma.ui.postMessage({ type: 'prefs', lang, route: startRoute });
-      return Note.start();
+      await Note.start();
+      return Flows.start();
     }
     if (msg.type === 'collapse') {
       const s = msg.collapsed ? COLLAPSED : SIZE;
