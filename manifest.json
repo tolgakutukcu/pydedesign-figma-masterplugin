@@ -18,6 +18,7 @@
     { "name": "Image Optimizer", "command": "images" }
   ],
   "relaunchButtons": [
+    { "command": "home", "name": "Open Pyde Design" },
     { "command": "readme", "name": "Edit Design ReadMe" },
     { "command": "note", "name": "Edit Frame Note" }
   ],

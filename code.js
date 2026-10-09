@@ -2899,6 +2899,12 @@ figma.ui.onmessage = async (msg) => {
       const saved = await figma.clientStorage.getAsync(LANG_KEY);
       if (saved === 'en' || saved === 'tr') lang = saved;
       await loadDrafts();
+      // "Open Pyde Design" in the right panel's Tools list (shown when nothing is selected). Set once per
+      // file, so opening the plugin doesn't change the file every time.
+      if (figma.root.getPluginData('relaunch') !== '1') {
+        relaunch(figma.root, { home: '' });
+        try { figma.root.setPluginData('relaunch', '1'); } catch (e) {}
+      }
       const theme = await figma.clientStorage.getAsync(THEME_KEY);
       figma.ui.postMessage({ type: 'prefs', lang, theme: theme === 'light' || theme === 'dark' ? theme : 'figma', route: startRoute });
       await Note.start();
