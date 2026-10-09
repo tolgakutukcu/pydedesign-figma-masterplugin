@@ -2661,8 +2661,10 @@ const Titles = (() => {
     const index = Math.max.apply(null, frames.map((f) => parent.children.findIndex((c) => c.id === f.id)));
     parent.insertChild(index + 1, title);
     title.x = left;
-    title.y = top - GAP - title.height;
+    // Width first: a new frame starts 100 px wide, where the text wraps and the title is taller than it
+    // ends up. Its final height decides where it goes.
     setTitleWidth(title, width);
+    title.y = top - GAP - title.height;
     if (parent.type === 'SECTION') growSection(parent);
     if (msg.align) await Flows.sync();
     figma.currentPage.selection = [title];
