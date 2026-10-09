@@ -54,6 +54,13 @@
   .bar .icon-btn:hover { background: rgba(255, 255, 255, .14); color: #fff; }
   body.checking #openSettings, body.check-failed #openSettings, body.outdated #openSettings { visibility: hidden; }
   body.checking .admin, body.check-failed .admin, body.outdated .admin { display: none !important; }
+  .bar-actions { flex: none; display: flex; align-items: center; gap: 2px; }
+  #toggleSize .i-expand, body.collapsed #toggleSize .i-collapse { display: none; }
+  body.collapsed #toggleSize .i-expand { display: block; }
+  /* Collapsed: the plugin is just the top bar (see COLLAPSED in code.js). Everything else is hidden. */
+  body.collapsed > :not(.bar) { display: none !important; }
+  body.collapsed #openSettings, body.collapsed .brand small { display: none; }
+  body.collapsed .bar { padding-right: 8px; }
 
   /* ---------- Common controls ---------- */
   .icon-btn {
@@ -619,9 +626,15 @@
       <img class="logo" alt="">
       <span><b>Pyde Design</b><small id="ver"></small></span>
     </button>
-    <button class="icon-btn" id="openSettings" data-i18n-title="settings">
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M2 4.5h6M11.5 4.5H14M2 11.5h2.5M8 11.5h6"/><circle cx="9.75" cy="4.5" r="1.75"/><circle cx="6.25" cy="11.5" r="1.75"/></svg>
-    </button>
+    <div class="bar-actions">
+      <button class="icon-btn" id="openSettings" data-i18n-title="settings">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M2 4.5h6M11.5 4.5H14M2 11.5h2.5M8 11.5h6"/><circle cx="9.75" cy="4.5" r="1.75"/><circle cx="6.25" cy="11.5" r="1.75"/></svg>
+      </button>
+      <button class="icon-btn" id="toggleSize" data-i18n-title="collapse">
+        <svg class="i-collapse" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 2.5v4h4M6.5 13.5v-4h-4M9.5 6.5l4.5-4.5M6.5 9.5L2 14"/></svg>
+        <svg class="i-expand" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2h4v4M6 14H2v-4M14 2L9.5 6.5M2 14l4.5-4.5"/></svg>
+      </button>
+    </div>
   </header>
 
   <!-- ==================== Home ==================== -->
@@ -1204,7 +1217,7 @@
 
 <script>
 // Only this plugin as a whole has a version; the tools inside it don't.
-const VERSION = '1.6.2';
+const VERSION = '1.7.0';
 const REPO = 'tolgakutukcu/pydedesign-figma-masterplugin';
 const RAW = 'https://raw.githubusercontent.com/' + REPO + '/main/';
 const VERSION_URL = RAW + 'version.json';
@@ -1218,7 +1231,7 @@ const POINTER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
 // Strings used outside the tools: top bar, home, settings, version check.
 const STRINGS = {
   en: {
-    home: 'All tools', settings: 'Settings', back: 'Back', language: 'Language', version: 'Version',
+    home: 'All tools', collapse: 'Make smaller', expand: 'Make bigger', settings: 'Settings', back: 'Back', language: 'Language', version: 'Version',
     langHint: 'Only changes the plugin interface, just for you.',
     tools: 'Tools',
     checklistName: 'Handoff Pre Checklist', checklistDesc: 'A handoff checklist for a root frame or section.',
@@ -1239,7 +1252,7 @@ const STRINGS = {
     justNow: 'just now', minAgo: ' min ago', hAgo: ' h ago', dateLocale: 'en-US'
   },
   tr: {
-    home: 'Tüm araçlar', settings: 'Ayarlar', back: 'Geri', language: 'Dil', version: 'Sürüm',
+    home: 'Tüm araçlar', collapse: 'Küçült', expand: 'Büyüt', settings: 'Ayarlar', back: 'Geri', language: 'Dil', version: 'Sürüm',
     langHint: 'Sadece senin için plugin arayüzünün dilini değiştirir.',
     tools: 'Araçlar',
     checklistName: 'Handoff Pre Checklist', checklistDesc: 'Root frame veya section için handoff kontrol listesi.',
@@ -3678,6 +3691,7 @@ function go(f) {
 function applyLang() {
   document.documentElement.lang = lang;
   translate(document, g(), true);
+  $('toggleSize').title = document.body.classList.contains('collapsed') ? g().expand : g().collapse;
   document.querySelectorAll('[data-lang]').forEach((b) => b.classList.toggle('on', b.dataset.lang === lang));
   $('sVer').textContent = g().version + ' ' + VERSION + (remoteVersion ? '  ·  GitHub: v' + remoteVersion : '');
   if (latestVersion) $('versions').textContent = g().installed + ': v' + VERSION + '  ·  ' + g().latest + ': v' + latestVersion;
@@ -3718,6 +3732,7 @@ async function checkVersion(silent) {
     if (isOlder(VERSION, latest)) {
       latestVersion = latest;
       cl.add('outdated');
+      setCollapsed(false); // an update blocks every tool: show it
     }
     applyLang();
     cl.remove('checking');
@@ -3736,7 +3751,19 @@ setInterval(() => checkVersion(true), 5 * 60 * 1000);
 document.querySelectorAll('.back').forEach((b) => { b.innerHTML = BACK; });
 document.querySelectorAll('.feature .back').forEach((b) => { b.onclick = () => go(null); });
 document.querySelectorAll('[data-go]').forEach((b) => { b.onclick = () => go(b.dataset.go); });
-$('goHome').onclick = () => go(null);
+// Collapsed, the plugin is just the top bar, for keeping it open next to the canvas while working.
+// Frame Note keeps its cards in sync in the background either way.
+function setCollapsed(on) {
+  if (document.body.classList.contains('collapsed') === on) return;
+  document.body.classList.toggle('collapsed', on);
+  $('toggleSize').title = on ? g().expand : g().collapse;
+  send({ type: 'collapse', collapsed: on });
+}
+$('toggleSize').onclick = () => setCollapsed(!document.body.classList.contains('collapsed'));
+$('goHome').onclick = () => {
+  if (document.body.classList.contains('collapsed')) return setCollapsed(false);
+  go(null);
+};
 $('openSettings').onclick = () => document.body.classList.add('settings-open');
 $('closeSettings').onclick = () => document.body.classList.remove('settings-open');
 $('openAdmin').onclick = () => Admin.open();

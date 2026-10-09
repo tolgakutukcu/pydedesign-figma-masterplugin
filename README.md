@@ -14,6 +14,8 @@ Run **Plugins → Pyde Design → Pyde Design** to get the list of tools, or pic
 
 Figma runs only one plugin or widget at a time: clicking into a widget (to copy its text, for example) closes this plugin. Unsaved Frame Note and Design ReadMe edits are kept as a draft on your computer while you type, so when you open the plugin again on the same frame or section, they come back with a "restored" notice. Save them, or drop them with **Drop these changes**. Drafts older than a week are removed.
 
+It's meant to stay open while you work: the button next to the gear in the top bar shrinks it to just the top bar (200 × 52), and clicking it (or the logo) brings it back. Frame Note keeps its cards following their frames in the background either way, and an update still opens it up.
+
 The plugin and the cards it draws use DM Sans. The interface can be switched between English and Turkish in Settings (the gear in the top bar). That only changes the interface for you; the cards on the canvas stay in English.
 
 ## Install

@@ -13,7 +13,9 @@
 // The UI talks to each tool through messages carrying `f` (the tool's id). Selection changes only go
 // to the tool currently on screen (`active`).
 
-figma.showUI(__html__, { width: 360, height: 600, themeColors: true });
+const SIZE = { width: 360, height: 600 };
+const COLLAPSED = { width: 200, height: 52 }; // just the top bar, for keeping the plugin open on the side
+figma.showUI(__html__, { width: SIZE.width, height: SIZE.height, themeColors: true });
 
 const TOOLS = ['checklist', 'readme', 'note', 'images', 'titles'];
 const LANG_KEY = 'pyde-lang';
@@ -2249,6 +2251,11 @@ figma.ui.onmessage = async (msg) => {
       await loadDrafts();
       figma.ui.postMessage({ type: 'prefs', lang, route: startRoute });
       return Note.start();
+    }
+    if (msg.type === 'collapse') {
+      const s = msg.collapsed ? COLLAPSED : SIZE;
+      figma.ui.resize(s.width, s.height);
+      return;
     }
     if (msg.type === 'setLang') {
       if (msg.lang === 'en' || msg.lang === 'tr') {
