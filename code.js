@@ -1967,8 +1967,11 @@ const Flows = (() => {
   const BROKEN_PREFIX = '➜ Flow (broken): ';
   const COLOR = '#4261EE';
   const BROKEN_COLOR = '#E5484D';
-  const WEIGHT = 3;
+  const WEIGHT = 4;
   const RADIUS = 16; // rounded corners of bent arrows
+  const START_CAP = 'CIRCLE_FILLED';   // a dot where the arrow starts
+  const END_CAP = 'ARROW_EQUILATERAL'; // a filled triangle where it ends
+  const STYLE = 2; // bump when the arrow's look changes, so existing arrows are redrawn
 
   function isFlow(node) {
     return node.type === 'GROUP' && node.getSharedPluginData(NS, KEY) !== '';
@@ -2055,7 +2058,7 @@ const Flows = (() => {
     await v.setVectorNetworkAsync({
       vertices: points.map((p, i) => ({
         x: p.x - minX, y: p.y - minY,
-        strokeCap: i === points.length - 1 ? 'ARROW_LINES' : 'ROUND',
+        strokeCap: i === points.length - 1 ? END_CAP : i === 0 ? START_CAP : 'NONE',
         cornerRadius: i && i < points.length - 1 ? RADIUS : 0
       })),
       segments: points.slice(1).map((p, i) => ({ start: i, end: i + 1 }))
@@ -2081,7 +2084,8 @@ const Flows = (() => {
     f.counterAxisSizingMode = 'AUTO';
     f.paddingTop = f.paddingBottom = 4;
     f.paddingLeft = f.paddingRight = 10;
-    f.cornerRadius = 12;
+    f.cornerRadius = 8;
+    f.clipsContent = true;
     f.fills = [solid(broken ? BROKEN_COLOR : COLOR)];
     const tx = figma.createText();
     tx.fontName = font;
@@ -2124,7 +2128,7 @@ const Flows = (() => {
       old.forEach((c) => c.remove());
     }
     const data = Object.assign({}, d, {
-      points, sig: JSON.stringify([points, d.label || '', !!broken]), broken: !!broken
+      points, sig: JSON.stringify([STYLE, points, d.label || '', !!broken]), broken: !!broken
     });
     group.name = flowName(data, broken);
     group.setSharedPluginData(NS, KEY, JSON.stringify(data));
@@ -2154,7 +2158,7 @@ const Flows = (() => {
       // Names follow renamed ends; the drawing is only redone when something actually moved.
       const next = Object.assign({}, d, { fromName: endName(from), toName: endName(to) });
       const container = containerFor(from, to);
-      const sig = container ? JSON.stringify([route(from, to, origin(container)), d.label || '', false]) : null;
+      const sig = container ? JSON.stringify([STYLE, route(from, to, origin(container)), d.label || '', false]) : null;
       if (d.broken || sig !== d.sig || (container && g.parent.id !== container.id)) await render(g, next, from, to, false);
       else if (next.fromName !== d.fromName || next.toName !== d.toName) {
         g.name = flowName(next, false);

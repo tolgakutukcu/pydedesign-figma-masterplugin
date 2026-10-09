@@ -143,7 +143,7 @@ Connects two layers with an arrow: **From** and **To** can be frames, or any obj
 - Add a **Label** if you like (e.g. "Tap Continue") and click **Connect**.
 - Selecting an arrow opens it for editing: change its ends or label and **Save changes**, or **Delete** it. **New arrow** starts over.
 
-The arrow (Pyde blue, 3 px, open arrowhead, label in a blue pill) goes from edge to edge: right to left when the ends are side by side, bottom to top when one is above the other, bending at right angles when they don't line up. It is a group named after what it connects, with node ids, so Figma MCP / Claude can read the flow:
+The arrow (Pyde blue, 4 px, a dot where it starts and a filled triangle where it ends, label in a blue tag with 8 px corners) goes from edge to edge: right to left when the ends are side by side, bottom to top when one is above the other, bending at right angles when they don't line up. It is a group named after what it connects, with node ids, so Figma MCP / Claude can read the flow:
 
 ```
 ➜ Flow: Login › Continue (12:40) → Home (56:78) · "Tap Continue"
