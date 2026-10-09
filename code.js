@@ -1976,7 +1976,8 @@ const Flows = (() => {
   const RADIUS = 16; // rounded corners of bent arrows
   const START_CAP = 'CIRCLE_FILLED';   // a dot where the arrow starts
   const END_CAP = 'ARROW_EQUILATERAL'; // a filled triangle where it ends
-  const STYLE = 2; // bump when the arrow's look changes, so existing arrows are redrawn
+  const STYLE = 3; // bump when the arrow's look changes, so existing arrows are redrawn
+  const LABEL_MAX = 200; // a longer label wraps onto more lines (text width, without the padding)
 
   function isFlow(node) {
     return node.type === 'GROUP' && node.getSharedPluginData(NS, KEY) !== '';
@@ -2170,7 +2171,14 @@ const Flows = (() => {
     tx.lineHeight = { unit: 'PIXELS', value: 20 };
     tx.characters = text;
     tx.fills = [solid('#FFFFFF')];
+    tx.textAlignHorizontal = 'CENTER';
     f.appendChild(tx);
+    // Short labels hug their text; long ones wrap at LABEL_MAX.
+    tx.textAutoResize = 'WIDTH_AND_HEIGHT';
+    if (tx.width > LABEL_MAX) {
+      tx.textAutoResize = 'HEIGHT';
+      tx.resize(LABEL_MAX, tx.height);
+    }
     let best = 0, at = 0;
     for (let i = 1; i < points.length; i++) {
       const d = Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y);
