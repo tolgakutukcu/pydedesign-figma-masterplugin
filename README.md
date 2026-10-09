@@ -14,7 +14,7 @@ Run **Plugins → Pyde Design → Pyde Design** to get the list of tools, or pic
 
 Figma runs only one plugin or widget at a time: clicking into a widget (to copy its text, for example) closes this plugin. Unsaved Frame Note and Design ReadMe edits are kept as a draft on your computer while you type, so when you open the plugin again on the same frame or section, they come back with a "restored" notice. Save them, or drop them with **Drop these changes**. Drafts older than a week are removed.
 
-The interface can be switched between English and Turkish in Settings (the gear in the top bar). That only changes the interface for you; the cards on the canvas stay in English.
+The plugin and the cards it draws use DM Sans. The interface can be switched between English and Turkish in Settings (the gear in the top bar). That only changes the interface for you; the cards on the canvas stay in English.
 
 ## Install
 
@@ -105,8 +105,9 @@ The card appears right below the frame, exactly as wide as the frame, in the sam
 
 - Select several frames to add the same paragraph to all of them.
 - While the plugin is open (on any tool), a card follows its frame when the frame is moved, resized or renamed. Anything that drifted while the plugin was closed is fixed the next time it is opened on that page.
-- Duplicating a frame duplicates its note. Deleting a frame leaves its card behind, renamed `📝 Note (frame deleted) → …`; delete it from the **Overview** tab or by selecting it.
-- Don't delete a card to remove a note — use **Remove** in the plugin.
+- Duplicating a frame duplicates its note.
+- **Broken notes**: a card that no frame owns — its frame was deleted, it was copied on its own, or its frame was moved inside another layer — is never deleted by the plugin. When the plugin opens, it renames it `📝 Note (broken: …) → …`, covers it with a red warning and lists it under **Broken notes** in the **Overview** tab, where it can be deleted. Undoing a frame's deletion brings its card back to normal.
+- Don't copy a card or edit its text by hand (the card says so too) — use the plugin. Don't delete a card to remove a note — use **Remove** in the plugin.
 
 ## Title Maker
 
@@ -146,7 +147,7 @@ placed right below the frame in the same section (or on the page, if the frame i
   "📝 Note → … (<node id>)" layer with that frame's node id (the id in a Figma URL uses "-" instead of ":",
   e.g. node-id=12-345 is 12:345). Read it with get_design_context.
 - Treat the notes as requirements for that frame. If a note contradicts the design, ask before implementing.
-- Layers named "📝 Note (frame deleted) → …" are leftovers; ignore them.
+- Layers named "📝 Note (broken: …) → …" (or the older "📝 Note (frame deleted) → …") are leftovers; ignore them.
 
 ## Figma titles
 Layers named "🏷 Title" are headings for the frames right below them (their text is the name of that

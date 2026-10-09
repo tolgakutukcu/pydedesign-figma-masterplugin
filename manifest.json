@@ -21,7 +21,7 @@
     { "command": "note", "name": "Edit Frame Note" }
   ],
   "networkAccess": {
-    "allowedDomains": ["https://raw.githubusercontent.com", "https://api.github.com"],
-    "reasoning": "Checks the latest plugin version and loads the team and checklist lists from GitHub. The admin screen saves those lists to the GitHub repo."
+    "allowedDomains": ["https://raw.githubusercontent.com", "https://api.github.com", "https://fonts.googleapis.com", "https://fonts.gstatic.com"],
+    "reasoning": "Checks the latest plugin version and loads the team and checklist lists from GitHub. The admin screen saves those lists to the GitHub repo. The interface font (DM Sans) is loaded from Google Fonts."
   }
 }

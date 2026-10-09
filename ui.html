@@ -2,6 +2,10 @@
 <html>
 <head>
 <meta charset="utf-8">
+<!-- The whole plugin uses DM Sans; if it can't load, Inter / the system font is used. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap">
 <style>
   /* The brand color is only used in the top bar and on primary action buttons.
      Everything else follows Figma's neutral theme colors (light and dark). */
@@ -26,7 +30,7 @@
   html, body { height: 100%; margin: 0; overflow: hidden; }
   body {
     display: flex; flex-direction: column;
-    font: 12px/1.45 Inter, system-ui, sans-serif;
+    font: 12px/1.45 'DM Sans', Inter, system-ui, sans-serif;
     color: var(--figma-color-text); background: var(--figma-color-bg);
     -webkit-font-smoothing: antialiased;
   }
@@ -398,7 +402,9 @@
     font-size: 11px; color: var(--figma-color-text-tertiary); margin-top: 2px;
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
   }
-  #s-note .entry.orphan { cursor: default; align-items: center; border-color: rgba(245, 158, 11, .5); background: var(--warn-bg); }
+  #s-note .entry.orphan { cursor: default; align-items: center; border-color: rgba(229, 72, 77, .45); background: rgba(229, 72, 77, .08); }
+  #s-note .entry.orphan .dot { background: #C62828; box-shadow: none; }
+  #s-note .placeholder.orphan .big { background: rgba(229, 72, 77, .12); color: var(--danger); }
   #s-note .entry.orphan .dot { margin-top: 0; }
 
   /* ---------- Image Optimizer ---------- */
@@ -1158,7 +1164,7 @@
 
 <script>
 // Only this plugin as a whole has a version; the tools inside it don't.
-const VERSION = '1.4.2';
+const VERSION = '1.5.0';
 const REPO = 'tolgakutukcu/pydedesign-figma-masterplugin';
 const RAW = 'https://raw.githubusercontent.com/' + REPO + '/main/';
 const VERSION_URL = RAW + 'version.json';
@@ -2011,8 +2017,12 @@ const Note = (() => {
       sectionText: 'Notes are added to frames, not sections. Select one or more frames inside this section.',
       outsideTitle: 'Frame isn’t in a section',
       outsideText: 'The note works, but frames are best kept in a section: developers (and Claude) usually read a whole section, and the note is read together with it.',
-      orphanTitle: 'This note’s frame was deleted',
-      orphanText: (n) => 'The card was attached to “' + n + '”, which no longer exists.',
+      orphanTitle: 'This note is broken',
+      orphanText: (n, r) => ({
+        deleted: 'It belonged to “' + n + '”, which was deleted. Delete this card.',
+        copy: 'It’s a copy of the note on “' + n + '” and isn’t attached to any frame. Delete this card; to add a note to another frame, select that frame.',
+        nested: '“' + n + '” is no longer directly in a section or on the page, so its note can’t be shown. Move the frame back, or delete this card.'
+      })[r] || '',
       deleteNote: 'Delete note card',
       inSection: (s) => 'in section “' + s + '”',
       noNote: 'No note yet', count: (n) => n + (n === 1 ? ' note' : ' notes'),
@@ -2039,7 +2049,8 @@ const Note = (() => {
       dropDraft: 'Drop these changes',
       ovCounts: (f, n) => '<b>' + f + '</b> ' + (f === 1 ? 'frame' : 'frames') + ' · <b>' + n + '</b> ' + (n === 1 ? 'note' : 'notes'),
       ovHint: 'Notes on the current page are refreshed every time you open this tab. Other pages show their last known state.',
-      orphans: 'Frame deleted', orphanSub: 'Card left behind on this page',
+      orphans: 'Broken notes',
+      orphanSub: (r) => ({ deleted: 'Frame deleted', copy: 'Copy, not attached to a frame', nested: 'Frame moved into another layer' })[r] || '',
       scanAll: 'Scan all pages', scanning: 'Scanning…', current: 'current page',
       ovEmpty: 'No notes in this file yet.',
       removePara: 'Remove this note'
@@ -2053,8 +2064,12 @@ const Note = (() => {
       sectionText: 'Notlar section’a değil frame’e eklenir. Bu section içinden bir veya birkaç frame seç.',
       outsideTitle: 'Frame bir section içinde değil',
       outsideText: 'Not çalışır ama frame’leri bir section içinde tutmak daha iyi: developer’lar (ve Claude) genelde tüm section’ı okur, not da onunla birlikte okunur.',
-      orphanTitle: 'Bu notun frame’i silinmiş',
-      orphanText: (n) => 'Kart “' + n + '” frame’ine aitti, o frame artık yok.',
+      orphanTitle: 'Bu not bozuk',
+      orphanText: (n, r) => ({
+        deleted: 'Bu not “' + n + '” frame’ine aitti, o frame silinmiş. Bu kartı sil.',
+        copy: '“' + n + '” frame’inin notunun bir kopyası, hiçbir frame’e bağlı değil. Bu kartı sil; başka bir frame’e not eklemek için o frame’i seç.',
+        nested: '“' + n + '” artık doğrudan bir section içinde ya da sayfada değil, bu yüzden notu gösterilemiyor. Frame’i geri taşı ya da bu kartı sil.'
+      })[r] || '',
       deleteNote: 'Not kartını sil',
       inSection: (s) => '“' + s + '” section’ında',
       noNote: 'Henüz not yok', count: (n) => n + ' not',
@@ -2081,7 +2096,8 @@ const Note = (() => {
       dropDraft: 'Bu değişiklikleri at',
       ovCounts: (f, n) => '<b>' + f + '</b> frame · <b>' + n + '</b> not',
       ovHint: 'Bulunduğun sayfadaki notlar bu sekmeyi her açtığında yenilenir. Diğer sayfalar bilinen son durumu gösterir.',
-      orphans: 'Frame’i silinmiş', orphanSub: 'Bu sayfada sahipsiz kalan kart',
+      orphans: 'Bozuk notlar',
+      orphanSub: (r) => ({ deleted: 'Frame’i silinmiş', copy: 'Kopya, bir frame’e bağlı değil', nested: 'Frame başka bir katmanın içine taşınmış' })[r] || '',
       scanAll: 'Tüm sayfaları tara', scanning: 'Taranıyor…', current: 'bu sayfa',
       ovEmpty: 'Bu dosyada henüz not yok.',
       removePara: 'Bu notu kaldır'
@@ -2204,7 +2220,7 @@ const Note = (() => {
     ph.className = 'placeholder' + (key === 'orphan' ? ' warn orphan' : '');
     $('phIco').innerHTML = key === 'orphan' ? ICONS.Warn : POINTER;
     $('phTitle').textContent = t()[key + 'Title'];
-    $('phText').textContent = key === 'orphan' ? t().orphanText(m.orphan.name) : t()[key + 'Text'];
+    $('phText').textContent = key === 'orphan' ? t().orphanText(m.orphan.name, m.orphan.reason) : t()[key + 'Text'];
   }
 
   function setMode(mode) {
@@ -2346,7 +2362,7 @@ const Note = (() => {
         row.className = 'entry orphan';
         row.innerHTML = '<span class="dot"></span><div class="meta"><div class="name"></div><div class="sub"></div></div>';
         row.querySelector('.name').textContent = o.name;
-        row.querySelector('.sub').textContent = t().orphanSub;
+        row.querySelector('.sub').textContent = t().orphanSub(o.reason);
         const del = document.createElement('button');
         del.className = 'btn small';
         del.textContent = t().deleteNote;

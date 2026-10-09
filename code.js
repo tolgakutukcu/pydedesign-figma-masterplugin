@@ -48,6 +48,28 @@ function fmtDate(ts) {
   const M = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   return d.getDate() + ' ' + M[d.getMonth()] + ' ' + d.getFullYear() + ', ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
 }
+// The cards and titles on the canvas use DM Sans (it comes with Figma, like all Google Fonts).
+// Inter is only a fallback in case DM Sans can't be loaded.
+const CARD_FONT_STYLES = {
+  regular: ['Regular', 'Regular'],
+  medium: ['Medium', 'Medium'],
+  semibold: ['SemiBold', 'Semi Bold'],
+  bold: ['Bold', 'Bold']
+};
+let cardFonts = null;
+async function loadCardFonts() {
+  if (cardFonts) return cardFonts;
+  for (const [i, family] of [[0, 'DM Sans'], [1, 'Inter']]) {
+    const set = {};
+    for (const k of Object.keys(CARD_FONT_STYLES)) set[k] = { family, style: CARD_FONT_STYLES[k][i] };
+    try {
+      await Promise.all(Object.keys(set).map((k) => figma.loadFontAsync(set[k])));
+      return (cardFonts = set);
+    } catch (e) {}
+  }
+  throw new Error(t('The card fonts couldn’t be loaded.', 'Kart fontları yüklenemedi.'));
+}
+
 // Relaunch data can't be set on some nodes (e.g. inside a library instance); that only loses the button.
 function relaunch(node, data) {
   try { node.setRelaunchData(data); } catch (e) {}
@@ -287,14 +309,9 @@ const ReadMe = (() => {
   const STICKY = '#FFEFA6';
   const LINK = '#2B49D6';
   const INK = { text: 1, secondary: 0.62, tertiary: 0.4 };
-  const FONTS = {
-    regular: { family: 'Inter', style: 'Regular' },
-    medium: { family: 'Inter', style: 'Medium' },
-    semibold: { family: 'Inter', style: 'Semi Bold' },
-    bold: { family: 'Inter', style: 'Bold' }
-  };
-  function ensureFonts() {
-    return Promise.all(Object.keys(FONTS).map((k) => figma.loadFontAsync(FONTS[k])));
+  let FONTS = null; // DM Sans (see loadCardFonts)
+  async function ensureFonts() {
+    FONTS = await loadCardFonts();
   }
 
   // `color` is a hex, or one of the INK levels ('text' | 'secondary' | 'tertiary').
@@ -830,7 +847,14 @@ const Note = (() => {
   const CARD_KEY = 'card';
   const IDX_PREFIX = 'idx:'; // per-frame index entries on the document root, used by the overview
   const CARD_PREFIX = '📝 Note → ';
-  const ORPHAN_PREFIX = '📝 Note (frame deleted) → ';
+  // A broken card: one that no frame owns. It stays on the canvas, renamed and covered with a red
+  // warning, until someone deletes it (the plugin never deletes a card on its own).
+  const BROKEN = {
+    deleted: { prefix: '📝 Note (broken: frame deleted) → ', text: 'Its frame was deleted, so this note isn’t attached to anything.' },
+    copy: { prefix: '📝 Note (broken: copy) → ', text: 'This is a copy of another frame’s note and isn’t attached to any frame.' },
+    nested: { prefix: '📝 Note (broken: frame moved) → ', text: 'Its frame is no longer directly in a section or on the page.' }
+  };
+  const OVERLAY_NAME = '⚠️ Broken note';
   const FRAME_TYPES = ['FRAME', 'COMPONENT', 'COMPONENT_SET', 'INSTANCE'];
 
   function indexIn(parent, node) {
@@ -901,12 +925,13 @@ const Note = (() => {
 
   function findCard(frame) {
     const page = pageOf(frame);
-    return page ? cardsOn(page).find((c) => cardInfo(c).targetId === frame.id) || null : null;
+    if (!page) return null;
+    return cardsOn(page).find((c) => { const i = cardInfo(c); return i.targetId === frame.id && !i.broken; }) || null;
   }
 
   // A fingerprint of everything the card shows, so a card is only redrawn when something changed
   // (an edit, a rename, an undo, or a copied card that now belongs to a new frame).
-  const CARD_LAYOUT = 2; // bump when the card's design changes, so existing cards are redrawn
+  const CARD_LAYOUT = 3; // bump when the card's design changes, so existing cards are redrawn
   function revision(frame, data) {
     const s = CARD_LAYOUT + '|' + frame.id + '|' + frame.name + '|' + JSON.stringify(data.entries);
     let h = 0;
@@ -921,22 +946,19 @@ const Note = (() => {
 
   // Ink colors are translucent black over the sticky note's paper color (same as Design ReadMe).
   const STICKY = '#FFEFA6';
-  const INK = { text: 1, secondary: 0.62, tertiary: 0.4 };
-  const FONTS = {
-    regular: { family: 'Inter', style: 'Regular' },
-    medium: { family: 'Inter', style: 'Medium' },
-    bold: { family: 'Inter', style: 'Bold' }
-  };
-  function ensureFonts() {
-    return Promise.all(Object.keys(FONTS).map((k) => figma.loadFontAsync(FONTS[k])));
+  const INK = { text: 1, strong: 0.8, secondary: 0.62, warn: 0.6, tertiary: 0.4 };
+  let FONTS = null; // DM Sans (see loadCardFonts)
+  async function ensureFonts() {
+    FONTS = await loadCardFonts();
   }
 
+  // `color` is one of the INK levels, or { hex, opacity }.
   function text(chars, font, size, color, name) {
     const tx = figma.createText();
     tx.fontName = FONTS[font];
     tx.fontSize = size;
     tx.characters = chars;
-    tx.fills = [solid('#1E1E1E', INK[color])];
+    tx.fills = [typeof color === 'string' ? solid('#1E1E1E', INK[color]) : solid(color.hex, color.opacity)];
     tx.lineHeight = { unit: 'PERCENT', value: 145 };
     if (name) tx.name = name;
     return tx;
@@ -967,6 +989,8 @@ const Note = (() => {
     put(parent, line);
   }
 
+  // Layout by Tolga (DM Sans): the notes on the sticky paper; below them a slightly darker strip with
+  // the frame's name and node id, a line for developers / AI agents and a warning for designers.
   function renderCard(card, frame, data) {
     for (const c of card.children.slice()) c.remove();
 
@@ -975,12 +999,12 @@ const Note = (() => {
     card.primaryAxisSizingMode = 'AUTO';
     card.counterAxisSizingMode = 'FIXED';
     card.resize(frame.width, card.height);
-    card.itemSpacing = 16;
-    card.paddingTop = card.paddingBottom = card.paddingLeft = card.paddingRight = 24;
+    card.itemSpacing = 0;
+    card.paddingTop = card.paddingBottom = card.paddingLeft = card.paddingRight = 0;
     card.cornerRadius = 4;
     card.fills = [solid(STICKY)];
     card.strokes = [];
-    card.clipsContent = false;
+    card.clipsContent = true; // the footer strip follows the rounded corners
     card.effects = [
       { type: 'DROP_SHADOW', color: { r: 0, g: 0, b: 0, a: 0.1 }, offset: { x: 0, y: 1 },
         radius: 3, spread: 0, visible: true, blendMode: 'NORMAL' },
@@ -988,27 +1012,79 @@ const Note = (() => {
         radius: 24, spread: -4, visible: true, blendMode: 'NORMAL' }
     ];
 
-    // Header: what this card is and which frame it belongs to.
-    const head = put(card, stack('Header', 'VERTICAL', 4));
-    const eyebrow = put(head, text('📝 FRAME NOTE', 'bold', 11, 'secondary', 'Eyebrow'));
+    const body = put(card, stack('Notes', 'VERTICAL', 8));
+    body.paddingTop = body.paddingBottom = body.paddingLeft = body.paddingRight = 16;
+    const eyebrow = put(body, text('📝 FRAME NOTE', 'bold', 11, 'secondary', 'Eyebrow'));
     eyebrow.letterSpacing = { unit: 'PERCENT', value: 6 };
-    put(head, text(frame.name, 'bold', 18, 'text', 'Frame name'));
-    put(head, text('Frame node ID: ' + frame.id, 'medium', 12, 'secondary', 'Frame ID'));
-    divider(card, 0.12);
 
     // One paragraph per note, each with its author and date, separated by a faint line.
-    const list = put(card, stack('Notes', 'VERTICAL', 14));
+    const list = put(body, stack('Paragraphs', 'VERTICAL', 12));
     data.entries.forEach((e, i) => {
       if (i) divider(list, 0.08);
       const item = put(list, stack('Note ' + (i + 1), 'VERTICAL', 6));
-      put(item, text(e.text.trim(), 'regular', 14, 'text', 'Text'));
+      put(item, text(e.text.trim(), 'medium', 16, 'text', 'Text'));
       put(item, text(e.by + ' · ' + fmtDate(e.at), 'regular', 11, 'tertiary', 'Author'));
     });
 
-    // A short footnote telling readers (and AI agents without project instructions) what the notes are.
-    divider(card, 0.08);
-    put(card, text('For developers & AI agents: requirements for the frame above (node ' + frame.id + ').',
+    // Footer: a darker strip (black ink at 5% over the paper).
+    const foot = put(card, stack('Footer', 'VERTICAL', 2));
+    foot.paddingTop = foot.paddingBottom = 8;
+    foot.paddingLeft = foot.paddingRight = 16;
+    foot.fills = [solid('#1E1E1E', 0.05)];
+    const row = put(foot, stack('Frame info', 'HORIZONTAL', 8));
+    const name = text(frame.name, 'bold', 11, 'strong', 'Frame name');
+    row.appendChild(name);
+    name.layoutSizingHorizontal = 'FILL';
+    name.textAutoResize = 'HEIGHT';
+    try { name.textTruncation = 'ENDING'; name.maxLines = 1; } catch (e) {} // a long name ends in "…"
+    const id = text('Frame node ID: ' + frame.id, 'medium', 11, 'secondary', 'Frame ID');
+    row.appendChild(id);
+    id.textAutoResize = 'WIDTH_AND_HEIGHT';
+    put(foot, text('For developers & AI agents: requirements for the frame above (node ' + frame.id + ').',
       'regular', 10, 'tertiary', 'About'));
+    put(foot, text('⚠️ Designers: Do not copy this note directly. Use Pyde Design plugin.',
+      'medium', 10, 'warn', 'Designer warning'));
+  }
+
+  // Covers a broken card with a red warning (absolutely positioned, so it doesn't change the card's
+  // size) and renames it. Redrawing the card for its frame again (undo) removes both.
+  function markBroken(card, reason) {
+    const info = cardInfo(card);
+    const name = BROKEN[reason].prefix + (info.frameName || '?');
+    if (card.name !== name) card.name = name;
+    const old = card.children.filter((c) => c.name === OVERLAY_NAME);
+    if (info.broken === reason && old.length) return;
+    old.forEach((c) => c.remove());
+
+    const o = figma.createFrame();
+    o.name = OVERLAY_NAME;
+    card.appendChild(o);
+    if (card.layoutMode !== 'NONE') o.layoutPositioning = 'ABSOLUTE';
+    o.x = 0;
+    o.y = 0;
+    o.resize(Math.max(1, card.width), Math.max(1, card.height));
+    o.constraints = { horizontal: 'STRETCH', vertical: 'STRETCH' };
+    o.layoutMode = 'VERTICAL';
+    o.primaryAxisSizingMode = 'FIXED';
+    o.counterAxisSizingMode = 'FIXED';
+    o.primaryAxisAlignItems = 'CENTER';
+    o.counterAxisAlignItems = 'CENTER';
+    o.itemSpacing = 6;
+    o.paddingTop = o.paddingBottom = o.paddingLeft = o.paddingRight = 16;
+    o.fills = [solid('#C62828', 0.94)];
+    o.clipsContent = true;
+    const white = (op) => ({ hex: '#FFFFFF', opacity: op });
+    const lines = [
+      ['⚠️ BROKEN NOTE', 'bold', 13, white(1)],
+      [BROKEN[reason].text, 'medium', 12, white(1)],
+      ['Designers: open Pyde Design → Frame Note to fix or delete it.', 'regular', 11, white(0.85)]
+    ];
+    lines.forEach(([chars, font, size, color], i) => {
+      const tx = put(o, text(chars, font, size, color, i ? 'Text' : 'Title'));
+      tx.textAlignHorizontal = 'CENTER';
+      if (!i) tx.letterSpacing = { unit: 'PERCENT', value: 6 };
+    });
+    card.setSharedPluginData(NS, CARD_KEY, JSON.stringify(Object.assign({}, info, { broken: reason })));
   }
 
   const GAP = 24;         // space between a frame and its card
@@ -1106,15 +1182,26 @@ const Note = (() => {
       if (f) owner.set(f.id, card); else pending.push(card);
     }
     // 2. Otherwise by the frame id stored on the card (the frame moved while the plugin was closed).
+    //    A second card for a frame that already has one is a copy.
     const lost = [];
     for (const card of pending) {
       const id = cardInfo(card).targetId;
       if (frames.some((fr) => fr.id === id)) {
-        if (owner.has(id)) card.remove(); // a stray copy of a card whose frame already has one
+        if (owner.has(id)) lost.push({ card, reason: 'copy' });
         else owner.set(id, card);
       } else {
-        lost.push(card);
+        lost.push({ card, reason: null });
       }
+    }
+    // Why the others have no frame: it's gone, it sits inside another layer now, or the card was
+    // copied from another page.
+    for (const l of lost) {
+      if (l.reason) continue;
+      const id = cardInfo(l.card).targetId;
+      const f = id ? await figma.getNodeByIdAsync(id) : null;
+      if (!f || f.removed || !isFrame(f) || !readNote(f)) l.reason = 'deleted';
+      else if (pageOf(f) && pageOf(f).id !== page.id) l.reason = 'copy';
+      else l.reason = canHost(f) ? 'copy' : 'nested';
     }
 
     let fontsReady = false;
@@ -1129,17 +1216,17 @@ const Note = (() => {
       writeIndex(frame, data);
     }
 
-    // 4. Cards whose frame was deleted stay on the canvas, marked in their layer name, until removed.
-    for (const card of lost) {
-      const name = ORPHAN_PREFIX + (cardInfo(card).frameName || '?');
-      if (card.name !== name) card.name = name;
+    // 4. Broken cards stay on the canvas, renamed and covered with a warning, until someone deletes them.
+    for (const l of lost) {
+      if (cardInfo(l.card).broken !== l.reason || !l.card.children.some((c) => c.name === OVERLAY_NAME)) await fonts();
+      markBroken(l.card, l.reason);
     }
 
     const found = new Set(frames.map((f) => f.id));
     for (const e of readIndex()) {
       if (e.pageId === page.id && !found.has(e.id)) removeIndex(e.id);
     }
-    return lost.map((c) => ({ id: c.id, name: cardInfo(c).frameName || '?' }));
+    return lost.map((l) => ({ id: l.card.id, name: cardInfo(l.card).frameName || '?', reason: l.reason }));
   }
 
   // Re-syncs the current page shortly after relevant edits, while the plugin is open.
@@ -1219,14 +1306,17 @@ const Note = (() => {
 
   // What a selected node points at:
   //  { kind: 'frame', frame }   a frame directly in a section or on the page, anything inside it, or its card
-  //  { kind: 'orphan', card }   a card whose frame was deleted
+  //  { kind: 'orphan', card }   a broken card (its frame was deleted, it's a copy, …)
   //  { kind: 'section' }        a section itself
   //  null                       anything else (including a Design ReadMe card)
   async function resolve(node) {
     for (let n = node; n && n.type !== 'PAGE'; n = n.parent) {
       if (isCard(n)) {
+        if (cardInfo(n).broken) return { kind: 'orphan', card: n };
         const f = await targetOf(n);
         if (!f) return { kind: 'orphan', card: n };
+        const own = findCard(f);
+        if (own && own.id !== n.id) return { kind: 'orphan', card: n }; // a copy, not marked yet
         return canHost(f) ? { kind: 'frame', frame: f } : null;
       }
     }
@@ -1279,7 +1369,7 @@ const Note = (() => {
     post('note', {
       type: 'state',
       status: orphan ? 'orphan' : section ? 'section' : 'none',
-      orphan: orphan ? { id: orphan.id, name: cardInfo(orphan).frameName || '?' } : null
+      orphan: orphan ? { id: orphan.id, name: cardInfo(orphan).frameName || '?', reason: cardInfo(orphan).broken || 'copy' } : null
     });
   }
 
@@ -1386,7 +1476,9 @@ const Note = (() => {
 
   async function deleteOrphan(id) {
     const card = await figma.getNodeByIdAsync(id);
-    if (card && !card.removed && isCard(card) && !(await targetOf(card))) card.remove();
+    if (!card || card.removed || !isCard(card)) return;
+    const f = cardInfo(card).broken ? null : await targetOf(card);
+    if (!f || (findCard(f) && findCard(f).id !== card.id)) card.remove();
   }
 
   async function goTo(id) {
@@ -1715,18 +1807,8 @@ const Titles = (() => {
   const PREFS_KEY = 'pyde-title-prefs';
   const SECTION_PAD = 100; // room kept around content that would stick out of its section (as Figma's "Resize to fit")
 
-  // DM Sans comes with Figma (all Google Fonts do). Its style is called "SemiBold"; the other spelling
-  // and Inter are only fallbacks.
-  const FONTS = [
-    { family: 'DM Sans', style: 'SemiBold' },
-    { family: 'DM Sans', style: 'Semi Bold' },
-    { family: 'Inter', style: 'Semi Bold' }
-  ];
   async function loadFont() {
-    for (const f of FONTS) {
-      try { await figma.loadFontAsync(f); return f; } catch (e) {}
-    }
-    throw new Error(t('No font could be loaded for the title.', 'Başlık için font yüklenemedi.'));
+    return (await loadCardFonts()).semibold;
   }
 
   // The frames a selection points at: for each selected layer, the top-level layer it sits in
