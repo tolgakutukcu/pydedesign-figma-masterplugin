@@ -361,7 +361,21 @@
   #s-note .view { display: none; }
   #s-note.view-note #nt-note, #s-note.view-overview #nt-overview { display: block; }
   #s-note.view-note.has-target .f-foot, #s-note.view-note.multi-target .f-foot { display: flex; }
-  #nt-form, #nt-multi { display: none; }
+  #nt-form, #nt-multi, #nt-fix { display: none; }
+  #s-note.fixing #nt-fix { display: block; }
+  #s-note.fixing #nt-form, #s-note.fixing #nt-multi, #s-note.fixing .placeholder { display: none !important; }
+  #s-note.view-note.fixing .f-foot { display: flex; }
+  #s-note .ph-actions { display: none; gap: 6px; margin-top: 10px; }
+  #s-note .placeholder.orphan .ph-actions { display: flex; }
+  #s-note .placeholder .ph-actions .btn { display: block; margin: 0; }
+  #s-note .fix-ico { background: rgba(229, 72, 77, .12) !important; color: var(--danger) !important; box-shadow: none !important; }
+  #s-note .fix-to { margin-top: 6px; align-items: flex-start; }
+  #s-note .fix-to .sub { white-space: normal; }
+  #s-note .fix-to.empty { padding: 14px 12px; border-radius: 10px; border: 1px dashed var(--figma-color-border-strong); color: var(--figma-color-text-secondary); text-align: center; }
+  #s-note .entry.orphan .meta { cursor: pointer; }
+  #s-note .entry.orphan .meta:hover .name { text-decoration: underline; }
+  #nt-cancelFix { display: none; }
+  #s-note.fixing #nt-cancelFix { display: block; }
   #s-note.has-target #nt-form, #s-note.multi-target #nt-multi { display: block; }
   #s-note.no-target .placeholder { display: flex; }
   #s-note .placeholder.warn .big { background: var(--warn-bg); color: var(--warn); }
@@ -822,7 +836,32 @@
           <div class="big" id="nt-phIco"></div>
           <b id="nt-phTitle"></b>
           <span id="nt-phText"></span>
-          <button class="btn" id="nt-deleteOrphan" data-i18n="deleteNote"></button>
+          <div class="ph-actions">
+            <button class="btn" id="nt-deleteOrphan" data-i18n="deleteNote"></button>
+            <button class="btn primary" id="nt-startFix" data-i18n="fix"></button>
+          </div>
+        </div>
+
+        <!-- Attaching a broken card to a frame -->
+        <div id="nt-fix">
+          <div class="target">
+            <div class="ico fix-ico" id="nt-fixIco"></div>
+            <div class="meta">
+              <div class="name" id="nt-fixName"></div>
+              <div class="sub" id="nt-fixSub"></div>
+            </div>
+          </div>
+          <div class="field">
+            <div class="lbl" data-i18n="fixTitle"></div>
+            <div class="target fix-to" id="nt-fixTo">
+              <div class="ico" id="nt-fixToIco"></div>
+              <div class="meta">
+                <div class="name" id="nt-fixToName"></div>
+                <div class="sub" id="nt-fixToSub"></div>
+              </div>
+            </div>
+            <div class="hint" id="nt-fixHint"></div>
+          </div>
         </div>
 
         <div id="nt-form">
@@ -909,6 +948,7 @@
         <div id="nt-upd"></div>
       </div>
       <div class="foot-actions">
+        <button class="btn" id="nt-cancelFix" data-i18n="cancel"></button>
         <button class="btn ghost-danger" id="nt-remove" data-i18n="remove"></button>
         <button class="btn primary" id="nt-save"></button>
       </div>
@@ -1164,7 +1204,7 @@
 
 <script>
 // Only this plugin as a whole has a version; the tools inside it don't.
-const VERSION = '1.5.0';
+const VERSION = '1.6.0';
 const REPO = 'tolgakutukcu/pydedesign-figma-masterplugin';
 const RAW = 'https://raw.githubusercontent.com/' + REPO + '/main/';
 const VERSION_URL = RAW + 'version.json';
@@ -2053,7 +2093,16 @@ const Note = (() => {
       orphanSub: (r) => ({ deleted: 'Frame deleted', copy: 'Copy, not attached to a frame', nested: 'Frame moved into another layer' })[r] || '',
       scanAll: 'Scan all pages', scanning: 'Scanning…', current: 'current page',
       ovEmpty: 'No notes in this file yet.',
-      removePara: 'Remove this note'
+      removePara: 'Remove this note',
+      fix: 'Fix', fixTitle: 'Attach the note to',
+      fixFrom: (n) => 'Broken note of “' + n + '”',
+      fixPick: 'Select the frame this note belongs to on the canvas.',
+      fixSuggested: 'Suggested: the frame right above the card. Or select another frame on the canvas.',
+      fixChosen: 'Or select another frame on the canvas.',
+      fixMulti: 'Select a single frame.',
+      fixHasNote: (n) => '“' + n + '” already has a note: the card’s paragraphs are added at the end (identical ones are skipped).',
+      fixNew: 'The note keeps its paragraphs, authors and dates.',
+      attach: 'Attach note', attaching: 'Attaching…'
     },
     tr: {
       back: 'Geri', appTitle: 'Frame Notu',
@@ -2100,7 +2149,16 @@ const Note = (() => {
       orphanSub: (r) => ({ deleted: 'Frame’i silinmiş', copy: 'Kopya, bir frame’e bağlı değil', nested: 'Frame başka bir katmanın içine taşınmış' })[r] || '',
       scanAll: 'Tüm sayfaları tara', scanning: 'Taranıyor…', current: 'bu sayfa',
       ovEmpty: 'Bu dosyada henüz not yok.',
-      removePara: 'Bu notu kaldır'
+      removePara: 'Bu notu kaldır',
+      fix: 'Düzelt', fixTitle: 'Notun bağlanacağı frame',
+      fixFrom: (n) => '“' + n + '” frame’inin bozuk notu',
+      fixPick: 'Canvas’ta bu notun ait olduğu frame’i seç.',
+      fixSuggested: 'Öneri: kartın hemen üstündeki frame. Canvas’ta başka bir frame de seçebilirsin.',
+      fixChosen: 'Canvas’ta başka bir frame de seçebilirsin.',
+      fixMulti: 'Tek bir frame seç.',
+      fixHasNote: (n) => '“' + n + '” frame’inin zaten notu var: kartın paragrafları sonuna eklenir (aynı olanlar tekrar eklenmez).',
+      fixNew: 'Not; paragrafları, yazarları ve tarihleriyle korunur.',
+      attach: 'Notu bağla', attaching: 'Bağlanıyor…'
     }
   };
 
@@ -2198,6 +2256,13 @@ const Note = (() => {
   }
 
   function renderFooter() {
+    if (fixing) {
+      $('save').textContent = saving ? t().attaching : t().attach;
+      $('save').disabled = saving || !fixTarget;
+      $('remove').style.display = 'none';
+      $('upd').textContent = '';
+      return;
+    }
     if (multi) {
       $('save').textContent = t().addAll(multi.ids.length);
       $('save').disabled = saving || !multi.ids.length || !$('bulk').value.trim();
@@ -2230,9 +2295,54 @@ const Note = (() => {
     cl.toggle('multi-target', mode === 'multi');
   }
 
+  // ---------- Fixing a broken card ----------
+  // `fixing` is the broken card being attached; `fixTarget` the frame it will go to: the frame selected
+  // on the canvas, or else the one suggested right above the card.
+  let fixing = null;   // { cardId, name, reason, suggestion }
+  let fixTarget = null; // { id, name, hasNote }
+
+  function startFix() {
+    const o = lastState.orphan;
+    if (!o) return;
+    fixing = { cardId: o.id, name: o.name, reason: o.reason, suggestion: o.suggestion || null };
+    root.classList.add('fixing');
+    render(lastState);
+  }
+  function stopFix() {
+    fixing = null;
+    fixTarget = null;
+    root.classList.remove('fixing');
+    render(lastState);
+  }
+
+  function renderFix(m) {
+    $('fixIco').innerHTML = ICONS.Warn;
+    $('fixName').textContent = t().fixFrom(fixing.name);
+    $('fixSub').textContent = t().orphanSub(fixing.reason);
+    const picked = m.status === 'ok' ? { id: m.target.id, name: m.target.name, hasNote: !!m.note, section: m.target.section, page: m.target.page } : null;
+    fixTarget = picked || (m.status === 'multiple' ? null : fixing.suggestion);
+    const box = $('fixTo');
+    box.classList.toggle('empty', !fixTarget);
+    if (fixTarget) {
+      $('fixToIco').innerHTML = ICONS.Frame;
+      $('fixToName').textContent = fixTarget.name;
+      $('fixToSub').textContent = fixTarget.hasNote ? t().fixHasNote(fixTarget.name) : t().fixNew;
+      $('fixToIco').style.display = $('fixToSub').style.display = '';
+    } else {
+      $('fixToIco').style.display = $('fixToSub').style.display = 'none';
+      $('fixToName').textContent = m.status === 'multiple' ? t().fixMulti : t().fixPick;
+    }
+    $('fixHint').textContent = !fixTarget ? '' : picked ? t().fixChosen : t().fixSuggested;
+  }
+
   // Fills the form from the plugin state, unless the user is mid-edit.
   function render(m) {
     lastState = m;
+
+    if (fixing) {
+      renderFix(m);
+      return renderFooter();
+    }
 
     if (dirty && editing && !(m.status === 'ok' && m.target.id === editing.id)) {
       // Selection moved away while editing: keep the form bound to the original frame.
@@ -2321,6 +2431,12 @@ const Note = (() => {
 
   function save() {
     if (saving || $('save').disabled) return;
+    if (fixing) {
+      if (!fixTarget) return;
+      saving = true;
+      renderFooter();
+      return send({ f: 'note', type: 'fix', id: fixing.cardId, frameId: fixTarget.id });
+    }
     clearTimeout(draftTimer);
     $('draftBanner').classList.remove('show');
     if (multi) {
@@ -2363,6 +2479,8 @@ const Note = (() => {
         row.innerHTML = '<span class="dot"></span><div class="meta"><div class="name"></div><div class="sub"></div></div>';
         row.querySelector('.name').textContent = o.name;
         row.querySelector('.sub').textContent = t().orphanSub(o.reason);
+        // Clicking it selects the card, where it can be fixed.
+        row.querySelector('.meta').onclick = () => { send({ f: 'note', type: 'goto', id: o.id }); setView('note'); };
         const del = document.createElement('button');
         del.className = 'btn small';
         del.textContent = t().deleteNote;
@@ -2426,6 +2544,13 @@ const Note = (() => {
       dirty = false;
       if (multi) { $('bulk').value = ''; grow($('bulk')); }
       editing = null; // so the saved note is redrawn from the file
+    } else if (m.type === 'fixed') {
+      saving = false;
+      dirty = false;
+      editing = null;
+      fixing = null;
+      fixTarget = null;
+      root.classList.remove('fixing');
     } else if (m.type === 'overview') {
       overview = m;
       $('scanAll').textContent = t().scanAll;
@@ -2469,6 +2594,8 @@ const Note = (() => {
     if (editing) { dropDraft(editing.id); dirty = false; send({ f: 'note', type: 'remove', id: editing.id }); }
   };
   $('deleteOrphan').onclick = () => { if (lastState.orphan) send({ f: 'note', type: 'deleteOrphan', id: lastState.orphan.id }); };
+  $('startFix').onclick = startFix;
+  $('cancelFix').onclick = stopFix;
   $('scanAll').onclick = () => {
     $('scanAll').textContent = t().scanning;
     $('scanAll').disabled = true;

@@ -1071,7 +1071,7 @@ const Note = (() => {
     o.counterAxisAlignItems = 'CENTER';
     o.itemSpacing = 6;
     o.paddingTop = o.paddingBottom = o.paddingLeft = o.paddingRight = 16;
-    o.fills = [solid('#C62828', 0.94)];
+    o.fills = [solid('#000000', 0.72)];
     o.clipsContent = true;
     const white = (op) => ({ hex: '#FFFFFF', opacity: op });
     const lines = [
@@ -1124,13 +1124,79 @@ const Note = (() => {
     return info.rev !== revision(frame, data) || info.targetId !== frame.id || card.name !== cardName(frame);
   }
 
+  // The card keeps a copy of the note, so a card whose frame gets deleted can still be attached to
+  // another frame with all its paragraphs (see fix).
+  function writeCardInfo(card, frame, data) {
+    card.setSharedPluginData(NS, CARD_KEY, JSON.stringify({
+      kind: 'frameNote', targetId: frame.id, frameName: frame.name, rev: revision(frame, data), entries: data.entries
+    }));
+  }
+
+  // ---------- Text edited on the canvas ----------
+  // A designer may change a paragraph right on the card. The card's text then wins: the note data is
+  // updated to match (author and date stay), without redrawing the card, so someone typing in it isn't
+  // thrown out of the text.
+
+  // The paragraph text layers of a card, in order ("Note 1" › "Text", "Note 2" › "Text", …), with their
+  // author lines. Works for the current card layout and the earlier ones.
+  function cardParagraphs(card) {
+    const out = [];
+    const visit = (n) => {
+      if (/^Note \d+$/.test(n.name) && 'children' in n) {
+        const tx = n.children.find((c) => c.type === 'TEXT' && c.name === 'Text');
+        const au = n.children.find((c) => c.type === 'TEXT' && c.name === 'Author');
+        if (tx) out.push({ text: tx.characters, author: au ? au.characters : '' });
+        return;
+      }
+      if ('children' in n && n.name !== OVERLAY_NAME) n.children.forEach(visit);
+    };
+    visit(card);
+    return out;
+  }
+
+  // The note with the card's text, or null when nothing was edited (or the card's structure no longer
+  // matches the note, e.g. a paragraph layer was deleted by hand).
+  function handEdits(card, data) {
+    const paras = cardParagraphs(card);
+    if (paras.length !== data.entries.length) return null;
+    let changed = false;
+    const entries = data.entries.map((e, i) => {
+      const tx = paras[i].text.trim();
+      if (!tx || tx === e.text.trim()) return e;
+      changed = true;
+      return Object.assign({}, e, { text: tx });
+    });
+    return changed ? { v: 1, entries } : null;
+  }
+
+  // "Tolga Kütükcü · 9 Oct 2026, 02:27" → { by, at }, for cards that predate the copy in the card data.
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  function parseAuthor(s) {
+    const i = s.lastIndexOf(' · ');
+    const by = i > 0 ? s.slice(0, i) : 'Unknown';
+    const m = (i > 0 ? s.slice(i + 3) : '').match(/^(\d{1,2}) (\w{3}) (\d{4}), (\d{2}):(\d{2})$/);
+    const at = m && MONTHS.indexOf(m[2]) !== -1
+      ? new Date(+m[3], MONTHS.indexOf(m[2]), +m[1], +m[4], +m[5]).getTime() : Date.now();
+    return { by, at };
+  }
+
+  // The paragraphs of a card: the copy kept in the card data, else the note of the frame it names
+  // (still there for a copied card), else what the card shows.
+  async function cardEntries(card) {
+    const info = cardInfo(card);
+    if (Array.isArray(info.entries) && info.entries.length) return info.entries;
+    const f = info.targetId ? await figma.getNodeByIdAsync(info.targetId) : null;
+    const note = f && !f.removed && isFrame(f) ? readNote(f) : null;
+    if (note) return note.entries;
+    return cardParagraphs(card).filter((p) => p.text.trim())
+      .map((p) => Object.assign({ id: newId(), text: p.text.trim() }, parseAuthor(p.author)));
+  }
+
   // Brings an existing card up to date with its frame: content, position, size, relaunch button.
   function refreshCard(card, frame, data) {
     if (isStale(card, frame, data)) {
       renderCard(card, frame, data);
-      card.setSharedPluginData(NS, CARD_KEY, JSON.stringify({
-        kind: 'frameNote', targetId: frame.id, frameName: frame.name, rev: revision(frame, data)
-      }));
+      writeCardInfo(card, frame, data);
       setRelaunch(frame, card, data);
     } else if (!relaunched.has(frame.id)) {
       setRelaunch(frame, card, data);
@@ -1209,8 +1275,15 @@ const Note = (() => {
 
     // 3. Every frame with a note gets an up-to-date card (a copied frame gets a card of its own).
     for (const frame of frames) {
-      const data = readNote(frame);
+      let data = readNote(frame);
       const card = owner.get(frame.id);
+      const edited = card && handEdits(card, data);
+      if (edited) {
+        // The card already shows the new text: only the data (and the card's record of it) change.
+        data = edited;
+        writeNote(frame, data);
+        writeCardInfo(card, frame, data);
+      }
       if (!card || isStale(card, frame, data)) await fonts();
       if (card) refreshCard(card, frame, data); else createCard(frame, data);
       writeIndex(frame, data);
@@ -1256,6 +1329,10 @@ const Note = (() => {
       const n = c.node;
       if (!n || n.removed || !('getSharedPluginData' in n)) continue;
       if (n.getSharedPluginData(NS, KEY) || n.getSharedPluginData(NS, CARD_KEY)) return scheduleSync();
+      // Text typed into a card (a layer inside it).
+      for (let p = n.parent; p && p.type !== 'PAGE' && p.type !== 'DOCUMENT'; p = p.parent) {
+        if (p.type === 'FRAME' && p.getSharedPluginData(NS, CARD_KEY)) return scheduleSync();
+      }
     }
   }
   let watched = null;
@@ -1369,13 +1446,73 @@ const Note = (() => {
     post('note', {
       type: 'state',
       status: orphan ? 'orphan' : section ? 'section' : 'none',
-      orphan: orphan ? { id: orphan.id, name: cardInfo(orphan).frameName || '?', reason: cardInfo(orphan).broken || 'copy' } : null
+      orphan: orphan ? {
+        id: orphan.id, name: cardInfo(orphan).frameName || '?', reason: cardInfo(orphan).broken || 'copy',
+        suggestion: suggestFrame(orphan)
+      } : null
     });
   }
 
   // The draft of the "add to all" text belongs to that exact set of frames.
   function multiKey(ids) {
     return ids.slice().sort().join(',');
+  }
+
+  // ---------- Fixing a broken card ----------
+
+  // The frame a broken card most likely belongs to: a top-level frame next to it whose bottom edge is at
+  // most 100 px above the card and which overlaps it horizontally. The closest one wins.
+  const SUGGEST_RANGE = 100;
+  function suggestFrame(card) {
+    if (!card.parent) return null;
+    let best = null, bestGap = Infinity;
+    for (const c of card.parent.children) {
+      if (c.id === card.id || isCard(c) || !isFrame(c) || !canHost(c)) continue;
+      const gap = card.y - (c.y + c.height);
+      const overlap = Math.min(card.x + card.width, c.x + c.width) - Math.max(card.x, c.x);
+      if (gap < -1 || gap > SUGGEST_RANGE || overlap <= 0) continue;
+      if (gap < bestGap) { best = c; bestGap = gap; }
+    }
+    return best ? { id: best.id, name: best.name, hasNote: !!readNote(best) } : null;
+  }
+
+  // Attaches a broken card's note to a frame. If the frame already has a note, the card's paragraphs
+  // are added at the end (paragraphs with the same text are skipped) and the broken card goes away,
+  // since its content now lives in the frame's own card. Otherwise the broken card becomes the frame's card.
+  async function fix(msg) {
+    const card = msg.id ? await figma.getNodeByIdAsync(msg.id) : null;
+    if (!card || card.removed || !isCard(card)) {
+      return figma.notify(t('The note card no longer exists.', 'Not kartı artık yok.'), { error: true });
+    }
+    const frame = await getFrame(msg.frameId);
+    if (!frame) return;
+    const entries = await cardEntries(card);
+    if (!entries.length) {
+      return figma.notify(t('This card has no note text to attach.', 'Bu kartta bağlanacak not metni yok.'), { error: true });
+    }
+    const old = readNote(frame);
+    const have = new Set((old ? old.entries : []).map((e) => e.text.trim()));
+    const added = entries.filter((e) => e.text && e.text.trim() && !have.has(e.text.trim()))
+      .map((e) => ({ id: newId(), text: e.text.trim(), by: e.by || 'Unknown', at: e.at || Date.now() }));
+    const data = { v: 1, entries: (old ? old.entries : []).concat(added) };
+    if (!data.entries.length) return;
+
+    await ensureFonts();
+    writeNote(frame, data);
+    const own = findCard(frame);
+    if (own && own.id !== card.id) {
+      refreshCard(own, frame, data);
+      card.remove();
+    } else {
+      // A fresh record makes the card stale, so it is redrawn for this frame (the warning goes away).
+      card.setSharedPluginData(NS, CARD_KEY, JSON.stringify({ kind: 'frameNote', targetId: frame.id, frameName: frame.name }));
+      refreshCard(card, frame, data);
+    }
+    writeIndex(frame, data);
+    figma.currentPage.selection = [frame];
+    figma.notify(old
+      ? t(added.length + ' paragraph(s) added to the note of “' + frame.name + '”', '“' + frame.name + '” notuna ' + added.length + ' paragraf eklendi')
+      : t('Note attached to “' + frame.name + '”', 'Not “' + frame.name + '” frame’ine bağlandı'));
   }
 
   // ---------- Messages ----------
@@ -1503,6 +1640,12 @@ const Note = (() => {
       return pushState();
     }
     if (msg.type === 'remove') { await remove(msg); return pushState(); }
+    if (msg.type === 'fix') {
+      await fix(msg);
+      post('note', { type: 'fixed' });
+      await runSync();
+      return pushState();
+    }
     if (msg.type === 'deleteOrphan') {
       await deleteOrphan(msg.id);
       figma.notify(t('Note deleted', 'Not silindi'));
