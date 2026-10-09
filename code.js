@@ -2352,6 +2352,124 @@ const Titles = (() => {
     figma.notify(t('Section tidied up', 'Section düzenlendi'));
   }
 
+  // ---------- Old titles ----------
+  // Titles made by hand before this plugin, by different designers, look different but are built the
+  // same way: a frame (sometimes alone inside a group) holding a single text layer, sitting directly in a
+  // section or on the page, filled, flat and wide, with screens right below it. Such layers are listed
+  // for review; nothing is converted without the designer ticking it.
+
+  // The frame of an old title: the layer itself, or the one frame inside a group.
+  function oldTitleFrame(node) {
+    if (node.type === 'GROUP' && node.children.length === 1 && node.children[0].type === 'FRAME') return node.children[0];
+    return node.type === 'FRAME' ? node : null;
+  }
+  // A frame with one text in it (any size): what "Convert to title" accepts for a single selected layer.
+  function convertible(node) {
+    if (isTitle(node) || isToolCard(node)) return null;
+    const f = oldTitleFrame(node);
+    if (!f || isTitle(f) || isToolCard(f) || f.children.length !== 1 || f.children[0].type !== 'TEXT') return null;
+    return f.children[0].characters.trim() ? f : null;
+  }
+  function filled(node) {
+    return Array.isArray(node.fills) && node.fills.some((p) => p.visible !== false && (p.opacity === undefined || p.opacity > 0) &&
+      (p.type === 'SOLID' || p.type.indexOf('GRADIENT') === 0 || p.type === 'IMAGE'));
+  }
+  // The stricter test used when scanning: shaped like a title bar, with screens below it.
+  function looksLikeTitle(node, siblings) {
+    const f = convertible(node);
+    if (!f || !filled(f)) return false;
+    const h = node.height, w = node.width;
+    if (h < 24 || h > 160 || w < 3.5 * h) return false;
+    const bottom = node.y + h;
+    return siblings.some((c) => c.id !== node.id && UNIT_TYPES.indexOf(c.type) !== -1 && !isToolCard(c) && !isTitle(c) &&
+      c.height >= 200 && hOverlap(c, node) && c.y >= bottom - 1 && c.y <= bottom + 600);
+  }
+  // Where to look: the selected section (or the one the selection is in), else the current page —
+  // the layers directly in it and in the sections inside it.
+  function scanScope() {
+    const sec = selectedSection();
+    return sec ? { node: sec, kind: 'section', name: sec.name } : { node: figma.currentPage, kind: 'page', name: figma.currentPage.name };
+  }
+  function containersIn(node) {
+    const out = [node];
+    for (const c of node.children) if (c.type === 'SECTION') out.push.apply(out, containersIn(c));
+    return out;
+  }
+  function findOldTitles(scope) {
+    const out = [];
+    for (const box of containersIn(scope)) {
+      for (const c of box.children) {
+        if (!looksLikeTitle(c, box.children)) continue;
+        out.push({ id: c.id, text: convertible(c).children[0].characters.trim(), width: Math.round(c.width), height: Math.round(c.height),
+          section: box.type === 'SECTION' ? box.name : null });
+      }
+    }
+    return out;
+  }
+
+  // Turns old titles into plugin titles with the current style; their text stays. A title that sits
+  // alone in a group comes out of it (a title has to be directly in its section).
+  async function convert(msg) {
+    const font = await loadFont();
+    let done = 0, failed = 0, last = null;
+    for (const id of Array.isArray(msg.ids) ? msg.ids : []) {
+      const node = await figma.getNodeByIdAsync(id);
+      const f = node && !node.removed ? convertible(node) : null;
+      if (!f) { failed++; continue; }
+      try {
+        const tx = f.children[0];
+        await Promise.all(tx.getRangeAllFontNames(0, tx.characters.length).map((fn) => figma.loadFontAsync(fn)));
+        if (node.type === 'GROUP') {
+          const parent = node.parent;
+          parent.insertChild(parent.children.findIndex((c) => c.id === node.id), f);
+          if (!node.removed && !node.children.length) node.remove(); // Figma usually removes an empty group itself
+        }
+        const w = f.width;
+        styleTitle(f, font);
+        setTitleWidth(f, w);
+        done++;
+        last = f;
+      } catch (e) {
+        failed++; // e.g. a font that isn't available
+      }
+    }
+    figma.commitUndo();
+    if (last) figma.currentPage.selection = [last];
+    figma.notify(t(done + (done === 1 ? ' title' : ' titles') + ' converted' + (failed ? ', ' + failed + ' couldn’t be' : ''),
+      done + ' başlık dönüştürüldü' + (failed ? ', ' + failed + ' tanesi dönüştürülemedi' : '')));
+  }
+
+  // ---------- Overview ----------
+
+  async function sendOverview() {
+    const page = figma.currentPage;
+    // Titles made by the plugin carry its data (indexed lookup, fast on big pages); the ones only named
+    // like a title can only sit directly in a section or on the page.
+    const seen = new Set();
+    const titles = [];
+    const addTitle = (n) => { if (!seen.has(n.id) && isTitle(n)) { seen.add(n.id); titles.push(n); } };
+    page.findAllWithCriteria({ types: ['FRAME'], sharedPluginData: { namespace: NS, keys: [KEY] } }).forEach(addTitle);
+    containersIn(page).forEach((box) => box.children.forEach(addTitle));
+    const scope = scanScope();
+    post('titles', {
+      type: 'overview',
+      page: page.name,
+      titles: titles.map((tl) => ({
+        id: tl.id, text: titleText(tl), frames: groupUnits(tl).length,
+        section: tl.parent.type === 'SECTION' ? tl.parent.name : null
+      })),
+      scope: { kind: scope.kind, name: scope.name },
+      candidates: findOldTitles(scope.node)
+    });
+  }
+
+  async function goTo(id) {
+    const node = await figma.getNodeByIdAsync(id);
+    if (!node || node.removed) return figma.notify(t('That layer no longer exists.', 'Bu katman artık yok.'));
+    figma.currentPage.selection = [node];
+    figma.viewport.scrollAndZoomIntoView([node]);
+  }
+
   // ---------- State ----------
 
   function pushState() {
@@ -2364,12 +2482,16 @@ const Titles = (() => {
         title: { id: title.id, text: titleText(title), frames: groupUnits(title).length }
       });
     }
+    // A single layer that looks like an old title can be converted.
+    const sel = figma.currentPage.selection;
+    const one = sel.length === 1 ? topLevel(sel[0]) : null;
+    const old = one && convertible(one) ? { id: one.id, text: convertible(one).children[0].characters.trim() } : null;
     const frames = selectedFrames();
-    if (!frames.length) return post('titles', { type: 'state', status: 'none', tidy: tidyTarget });
+    if (!frames.length) return post('titles', { type: 'state', status: 'none', tidy: tidyTarget, old });
     const parent = frames[0].parent;
     if (frames.some((f) => f.parent.id !== parent.id)) return post('titles', { type: 'state', status: 'mixed', tidy: tidyTarget });
     post('titles', {
-      type: 'state', status: 'ok', tidy: tidyTarget, count: frames.length,
+      type: 'state', status: 'ok', tidy: tidyTarget, old, count: frames.length,
       name: frames.length === 1 ? frames[0].name : null,
       section: parent.type === 'SECTION' ? parent.name : null,
       page: figma.currentPage.name
@@ -2385,10 +2507,13 @@ const Titles = (() => {
   async function onMessage(msg) {
     if (msg.type === 'refresh') return pushState();
     if (msg.type === 'setPrefs') return figma.clientStorage.setAsync(PREFS_KEY, { align: !!msg.align });
-    const actions = { add, restyle, alignTitle, tidy };
+    if (msg.type === 'overview') return sendOverview();
+    if (msg.type === 'goto') return goTo(msg.id);
+    const actions = { add, restyle, alignTitle, tidy, convert };
     if (actions[msg.type]) {
       await actions[msg.type](msg);
       post('titles', { type: 'done', action: msg.type });
+      if (msg.type === 'convert') await sendOverview();
       return pushState();
     }
   }

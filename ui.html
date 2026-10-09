@@ -473,14 +473,31 @@
   #tt-form, #tt-title, #s-titles .tidy { display: none; }
   #s-titles.mode-none .placeholder { display: flex; padding-bottom: 32px; }
   #s-titles.mode-ok #tt-form, #s-titles.mode-title #tt-title { display: block; }
-  #s-titles.mode-ok .f-foot { display: flex; }
-  #s-titles.has-section .tidy { display: block; }
+  #s-titles .view { display: none; }
+  #s-titles.view-main #tt-main, #s-titles.view-overview #tt-overview { display: block; }
+  #s-titles.view-main.mode-ok .f-foot { display: flex; }
+  #s-titles.has-section #tt-tidyBox, #s-titles.has-old #tt-oldBox { display: block; }
+  #s-titles .counts { color: var(--figma-color-text-secondary); }
+  #s-titles .counts b { color: var(--figma-color-text); font-variant-numeric: tabular-nums; }
+  #s-titles .entry .t-dot {
+    flex: none; width: 14px; height: 8px; border-radius: 2px; background: linear-gradient(#7B7D83, #5C5E66);
+  }
+  #s-titles .old { margin-top: 24px; padding-top: 4px; border-top: 1px solid var(--figma-color-border); }
+  #s-titles .old .page-name { margin-top: 14px; }
+  #s-titles .old .hint { margin: 0 0 8px; }
+  #s-titles .old .entry { cursor: default; }
+  #s-titles .old .entry input { flex: none; margin: 0; accent-color: var(--figma-color-text); cursor: pointer; }
+  #s-titles .old .entry .meta { cursor: pointer; }
+  #s-titles .old .entry .meta:hover .name { text-decoration: underline; }
+  #s-titles .old-actions { display: none; justify-content: space-between; gap: 6px; margin-top: 8px; }
+  #s-titles .old.has-items .old-actions { display: flex; }
   #s-titles .tt-actions { display: flex; gap: 6px; margin-top: 12px; }
   #s-titles .tidy {
     margin-top: 20px; padding: 12px; border-radius: 10px;
     border: 1px solid var(--figma-color-border); background: var(--figma-color-bg-secondary);
   }
   #s-titles .tidy .lbl { margin-bottom: 2px; color: var(--figma-color-text); }
+  #s-titles .old-box { border-style: dashed; }
   #s-titles .tidy .hint { margin: 0 0 10px; }
   .check {
     display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; margin-bottom: 6px; cursor: pointer;
@@ -1051,15 +1068,20 @@
   </div>
 
   <!-- ==================== Title Maker ==================== -->
-  <div class="screen feature mode-none" id="s-titles">
+  <div class="screen feature mode-none view-main" id="s-titles">
     <div class="f-head">
       <div class="f-title">
         <button class="icon-btn back" data-i18n-title="back"></button>
         <h1 data-i18n="appTitle"></h1>
       </div>
+      <nav class="tabs">
+        <button data-view="main" class="on" data-i18n="tabMain"></button>
+        <button data-view="overview" data-i18n="tabOverview"></button>
+      </nav>
     </div>
 
     <main class="scroll">
+     <section class="view" id="tt-main">
       <div class="placeholder">
         <div class="big" id="tt-phIco"></div>
         <b id="tt-phTitle"></b>
@@ -1106,12 +1128,35 @@
         </div>
       </div>
 
+      <!-- A single layer that looks like an old, hand-made title -->
+      <div class="tidy old-box" id="tt-oldBox">
+        <div class="lbl" data-i18n="oldOne"></div>
+        <div class="hint" id="tt-oldText"></div>
+        <button class="btn" id="tt-convertOne" data-i18n="convertOne"></button>
+      </div>
+
       <!-- The section of the selection: tidy it up -->
       <div class="tidy" id="tt-tidyBox">
         <div class="lbl" id="tt-tidyLbl"></div>
         <div class="hint" data-i18n="tidyHint"></div>
         <button class="btn" id="tt-tidy"></button>
       </div>
+     </section>
+
+     <section class="view" id="tt-overview">
+      <div class="counts" id="tt-counts"></div>
+      <div id="tt-list"></div>
+
+      <div class="old">
+        <div class="page-name" data-i18n="oldTitle"></div>
+        <div class="hint" id="tt-oldScope"></div>
+        <div id="tt-oldList"></div>
+        <div class="old-actions">
+          <button class="btn small" id="tt-toggleOld"></button>
+          <button class="btn primary small" id="tt-convert"></button>
+        </div>
+      </div>
+     </section>
     </main>
 
     <footer class="f-foot">
@@ -1234,7 +1279,7 @@
 
 <script>
 // Only this plugin as a whole has a version; the tools inside it don't.
-const VERSION = '1.8.0';
+const VERSION = '1.9.0';
 const REPO = 'tolgakutukcu/pydedesign-figma-masterplugin';
 const RAW = 'https://raw.githubusercontent.com/' + REPO + '/main/';
 const VERSION_URL = RAW + 'version.json';
@@ -3599,7 +3644,18 @@ const Titles = (() => {
       tidyLbl: (s) => 'Section “' + s + '”',
       tidy: 'Tidy up section',
       tidyHint: 'ReadMe top left, then the screen groups 48 px apart (titles, frames and notes together), 100 px around everything.',
-      working: 'Working…'
+      working: 'Working…',
+      tabMain: 'Title', tabOverview: 'Overview',
+      oldOne: 'Looks like an old title',
+      convertOne: 'Convert to title',
+      counts: (n, p) => '<b>' + n + '</b> ' + (n === 1 ? 'title' : 'titles') + ' on “' + p + '”',
+      noTitles: 'No titles on this page yet.',
+      framesBelow: (n) => n + (n === 1 ? ' frame' : ' frames'),
+      oldTitle: 'Old titles',
+      oldScope: (k, n) => (k === 'section' ? 'In section “' + n + '”' : 'On page “' + n + '”') + ': coloured bars with a single text, directly above screens. Untick the ones that aren’t titles.',
+      oldNone: 'Nothing that looks like an old title here.',
+      convert: (n) => 'Convert ' + n + (n === 1 ? ' title' : ' titles'), converting: 'Converting…',
+      selectAll: 'Select all', selectNone: 'Clear'
     },
     tr: {
       back: 'Geri', appTitle: 'Başlık Ekleyici',
@@ -3620,7 +3676,18 @@ const Titles = (() => {
       tidyLbl: (s) => '“' + s + '” section’ı',
       tidy: 'Section’ı düzenle',
       tidyHint: 'Künye sol üstte, ardından ekran grupları 48 px arayla (başlıklar, frame’ler ve notlar birlikte), her yönden 100 px boşluk.',
-      working: 'Düzenleniyor…'
+      working: 'Düzenleniyor…',
+      tabMain: 'Başlık', tabOverview: 'Genel bakış',
+      oldOne: 'Eski bir başlık gibi görünüyor',
+      convertOne: 'Başlığa dönüştür',
+      counts: (n, p) => '“' + p + '” sayfasında <b>' + n + '</b> başlık',
+      noTitles: 'Bu sayfada henüz başlık yok.',
+      framesBelow: (n) => n + ' frame',
+      oldTitle: 'Eski başlıklar',
+      oldScope: (k, n) => (k === 'section' ? '“' + n + '” section’ında' : '“' + n + '” sayfasında') + ': ekranların hemen üstünde, içinde tek bir text olan renkli şeritler. Başlık olmayanların işaretini kaldır.',
+      oldNone: 'Burada eski başlığa benzeyen bir şey yok.',
+      convert: (n) => n + ' başlığı dönüştür', converting: 'Dönüştürülüyor…',
+      selectAll: 'Tümünü seç', selectNone: 'Temizle'
     }
   };
 
@@ -3629,10 +3696,14 @@ const Titles = (() => {
   const t = () => S[lang];
   let lastState = { status: 'none' };
   let busy = null; // the action being run
+  let overview = null;
+  let picked = new Set(); // old titles ticked for conversion
 
   function render(m) {
     lastState = m;
     const cl = root.classList;
+    cl.toggle('has-old', !!m.old && m.status !== 'title');
+    if (m.old) $('oldText').textContent = '“' + m.old.text + '”';
     ['none', 'ok', 'title'].forEach((k) => cl.toggle('mode-' + k, (m.status === 'mixed' ? 'none' : m.status) === k));
     cl.toggle('has-section', !!m.tidy);
     if (m.tidy) $('tidyLbl').textContent = t().tidyLbl(m.tidy.name);
@@ -3660,6 +3731,80 @@ const Titles = (() => {
     $('restyle').disabled = !!busy;
     $('tidy').textContent = busy === 'tidy' ? t().working : t().tidy;
     $('tidy').disabled = !!busy;
+    $('convertOne').disabled = !!busy;
+    if (overview) {
+      const n = overview.candidates.filter((c) => picked.has(c.id)).length;
+      $('convert').textContent = busy === 'convert' ? t().converting : t().convert(n);
+      $('convert').disabled = !!busy || !n;
+      $('toggleOld').textContent = n === overview.candidates.length ? t().selectNone : t().selectAll;
+    }
+  }
+
+  // ---------- Overview ----------
+
+  function entryRow(name, sub, onclick, lead) {
+    const row = document.createElement(onclick && !lead ? 'button' : 'div');
+    row.className = 'entry';
+    if (lead) row.append(lead);
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    meta.innerHTML = '<div class="name"></div><div class="sub"></div>';
+    meta.querySelector('.name').textContent = name;
+    meta.querySelector('.sub').textContent = sub;
+    if (onclick) (lead ? meta : row).onclick = onclick;
+    row.append(meta);
+    return row;
+  }
+
+  function renderOverview() {
+    if (!overview) return;
+    const o = overview;
+    $('counts').innerHTML = t().counts(o.titles.length, o.page);
+    const list = $('list');
+    list.innerHTML = '';
+    if (!o.titles.length) {
+      const d = document.createElement('div');
+      d.className = 'ov-empty';
+      d.textContent = t().noTitles;
+      list.append(d);
+    }
+    // Grouped by section, in the order they come.
+    const sections = [];
+    o.titles.forEach((x) => { if (sections.indexOf(x.section) === -1) sections.push(x.section); });
+    sections.forEach((sec) => {
+      const h = document.createElement('div');
+      h.className = 'page-name';
+      h.textContent = sec || o.page;
+      list.append(h);
+      o.titles.filter((x) => x.section === sec).forEach((x) => {
+        const dot = document.createElement('span');
+        dot.className = 't-dot';
+        const row = entryRow(x.text, t().framesBelow(x.frames), () => send({ f: 'titles', type: 'goto', id: x.id }));
+        row.prepend(dot);
+        list.append(row);
+      });
+    });
+
+    $('oldScope').textContent = o.candidates.length ? t().oldScope(o.scope.kind, o.scope.name) : t().oldNone;
+    root.querySelector('.old').classList.toggle('has-items', !!o.candidates.length);
+    const old = $('oldList');
+    old.innerHTML = '';
+    o.candidates.forEach((c) => {
+      const box = document.createElement('input');
+      box.type = 'checkbox';
+      box.checked = picked.has(c.id);
+      box.onchange = () => { box.checked ? picked.add(c.id) : picked.delete(c.id); renderButtons(); };
+      old.append(entryRow(c.text, (c.section ? c.section + ' · ' : '') + c.width + ' × ' + c.height,
+        () => send({ f: 'titles', type: 'goto', id: c.id }), box));
+    });
+    renderButtons();
+  }
+
+  function setView(v) {
+    root.classList.toggle('view-main', v === 'main');
+    root.classList.toggle('view-overview', v === 'overview');
+    root.querySelectorAll('.tabs button').forEach((b) => b.classList.toggle('on', b.dataset.view === v));
+    if (v === 'overview') send({ f: 'titles', type: 'overview' });
   }
 
   function run(type, extra) {
@@ -3677,9 +3822,17 @@ const Titles = (() => {
   function applyLang() {
     translate(root, t());
     render(lastState);
+    renderOverview();
   }
 
   function onMessage(m) {
+    if (m.type === 'overview') {
+      // New candidates come ticked; the ones still listed keep their tick.
+      const before = overview ? new Set(overview.candidates.map((c) => c.id)) : new Set();
+      m.candidates.forEach((c) => { if (!before.has(c.id)) picked.add(c.id); });
+      overview = m;
+      return renderOverview();
+    }
     if (m.type === 'state') render(m);
     else if (m.type === 'prefs') $('align').checked = m.align;
     else if (m.type === 'done' || m.type === 'error') {
@@ -3696,6 +3849,17 @@ const Titles = (() => {
   $('restyle').onclick = () => { if (lastState.title) run('restyle', { id: lastState.title.id }); };
   $('alignTitle').onclick = () => { if (lastState.title) run('alignTitle', { id: lastState.title.id }); };
   $('tidy').onclick = () => { if (lastState.tidy) run('tidy', { id: lastState.tidy.id }); };
+  $('convertOne').onclick = () => { if (lastState.old) run('convert', { ids: [lastState.old.id] }); };
+  $('convert').onclick = () => {
+    if (overview) run('convert', { ids: overview.candidates.filter((c) => picked.has(c.id)).map((c) => c.id) });
+  };
+  $('toggleOld').onclick = () => {
+    if (!overview) return;
+    const all = overview.candidates.every((c) => picked.has(c.id));
+    picked = new Set(all ? [] : overview.candidates.map((c) => c.id));
+    renderOverview();
+  };
+  root.querySelectorAll('.tabs button').forEach((b) => { b.onclick = () => setView(b.dataset.view); });
 
   return { applyLang, onMessage, save: add };
 })();

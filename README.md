@@ -122,6 +122,8 @@ The card appears right below the frame, exactly as wide as the frame, in the sam
 
 **A selected title** (or its text) is recognised: **Update style** brings an older or hand-made title to the current style (keeping its text), and **Line up its frames** lines up the frames below it and fits the title to them. A frame belongs to the closest title above it that it overlaps horizontally, so copied titles work too.
 
+**Old titles**: titles made by hand before this plugin (by different designers, in different styles) can be turned into plugin titles. The **Overview** tab lists the titles on the current page and, under **Old titles**, the layers that look like one in the selected section (or on the current page): a frame — or a group holding just one frame — with a single text in it, sitting directly in a section or on the page, filled, flat and wide (24–160 px high, at least 3.5× as wide as high), with screens right below it. Coloured bars without text are skipped. They all come ticked; untick the ones that aren't titles and click **Convert**. A converted title gets the current style and keeps its text and width; a title that was alone in a group comes out of it. Selecting a single such layer also offers **Convert to title**, even when it doesn't match the shape rules. Clicking a row selects that layer.
+
 **Tidy up section** (also on the Design ReadMe screen) rearranges the section the selection is in:
 
 - The Design ReadMe card goes to the top-left corner, 100 px from the edges.
