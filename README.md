@@ -141,7 +141,7 @@ Connects two layers with an arrow: **From** and **To** can be frames, or any obj
 
 - Selecting a layer on the canvas fills the field that is waiting (the highlighted one): first **From**, then **To**. Selecting two layers fills both (left / top one first). Click a field to choose it again; ⇅ swaps them.
 - Under each field, **Leaves** / **Arrives** picks the side the arrow uses: **Auto**, or top / right / bottom / left.
-- Add a **Label** if you like (e.g. "Tap Continue"), pick a **Colour** (blue, green, orange, purple, red, grey; the last one picked stays) and click **Connect**.
+- Add a **Label** if you like (e.g. "Tap Continue"), pick a **Colour** (blue, green, orange, purple, red, grey; the last one picked stays) and an **opacity** (10–100%, for the whole arrow and its label), then click **Connect**.
 - Selecting an arrow opens it for editing: change its ends or label and **Save changes**, or **Delete** it. **New arrow** starts over.
 
 The arrow (4 px, a dot where it starts and a filled triangle where it ends, label in a tag of the same colour with 8 px corners) leaves from the middle of a side, goes out a short stub and takes a right-angled path to the other end. Of all the possible paths, it picks the one that crosses no other screen (or any other layer in the section), then the shortest with the fewest bends; it only goes over a screen when there's no way around. **Auto** sides try all four sides and keep the best path. It is a group named after what it connects, with node ids, so Figma MCP / Claude can read the flow:

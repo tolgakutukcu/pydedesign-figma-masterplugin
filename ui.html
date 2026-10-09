@@ -557,7 +557,14 @@
   #s-flows .pick .f-sub:empty { display: none; }
   #s-flows .pick-hint { font-size: 11px; color: var(--figma-color-text); margin-top: 6px; font-weight: 500; }
   #s-flows .pick-hint:empty { display: none; }
-  #s-flows .swap-row { display: flex; justify-content: center; margin: 4px 0 -8px; }
+  #s-flows .end-card {
+    padding: 10px; border-radius: 12px; border: 1px solid var(--figma-color-border); background: var(--figma-color-bg-secondary);
+  }
+  #s-flows .end-card .pick:not(.set):not(.focus) { background: var(--figma-color-bg); }
+  #s-flows .swap-row { display: flex; justify-content: center; margin: 4px 0; }
+  #s-flows .color-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  #s-flows .opacity { flex: none; display: flex; align-items: center; gap: 4px; color: var(--figma-color-text-secondary); }
+  #s-flows .opacity .input { width: 58px; padding: 5px 6px; text-align: right; }
   #s-flows .a-dot { flex: none; width: 16px; height: 16px; color: #4261EE; transform: rotate(-90deg); }
   #s-flows .a-dot svg { width: 16px; height: 16px; display: block; }
   #s-flows .entry.broken { border-color: rgba(229, 72, 77, .45); background: rgba(229, 72, 77, .08); }
@@ -1264,17 +1271,22 @@
           <span data-i18n="brokenText"></span>
         </div>
 
-        <div class="lbl" data-i18n="from"></div>
-        <button class="pick" id="fl-from"><div class="meta"><div class="f-name"></div><div class="f-sub"></div></div></button>
-        <div class="pick-hint" id="fl-fromHint"></div>
-        <div class="side-row"><span data-i18n="exitLbl"></span><div class="seg sides" id="fl-fromSide"><button data-side="auto" data-i18n="auto"></button><button data-side="top" data-i18n-title="top">↑</button><button data-side="right" data-i18n-title="right">→</button><button data-side="bottom" data-i18n-title="bottom">↓</button><button data-side="left" data-i18n-title="left">←</button></div></div>
+        <!-- Each end in its own card; the swap button sits between them -->
+        <div class="end-card">
+          <div class="lbl" data-i18n="from"></div>
+          <button class="pick" id="fl-from"><div class="meta"><div class="f-name"></div><div class="f-sub"></div></div></button>
+          <div class="pick-hint" id="fl-fromHint"></div>
+          <div class="side-row"><span data-i18n="exitLbl"></span><div class="seg sides" id="fl-fromSide"><button data-side="auto" data-i18n="auto"></button><button data-side="top" data-i18n-title="top">↑</button><button data-side="right" data-i18n-title="right">→</button><button data-side="bottom" data-i18n-title="bottom">↓</button><button data-side="left" data-i18n-title="left">←</button></div></div>
+        </div>
 
         <div class="swap-row"><button class="icon-btn" id="fl-swap" data-i18n-title="swap"></button></div>
 
-        <div class="lbl" data-i18n="to"></div>
-        <button class="pick" id="fl-to"><div class="meta"><div class="f-name"></div><div class="f-sub"></div></div></button>
-        <div class="pick-hint" id="fl-toHint"></div>
-        <div class="side-row"><span data-i18n="enterLbl"></span><div class="seg sides" id="fl-toSide"><button data-side="auto" data-i18n="auto"></button><button data-side="top" data-i18n-title="top">↑</button><button data-side="right" data-i18n-title="right">→</button><button data-side="bottom" data-i18n-title="bottom">↓</button><button data-side="left" data-i18n-title="left">←</button></div></div>
+        <div class="end-card">
+          <div class="lbl" data-i18n="to"></div>
+          <button class="pick" id="fl-to"><div class="meta"><div class="f-name"></div><div class="f-sub"></div></div></button>
+          <div class="pick-hint" id="fl-toHint"></div>
+          <div class="side-row"><span data-i18n="enterLbl"></span><div class="seg sides" id="fl-toSide"><button data-side="auto" data-i18n="auto"></button><button data-side="top" data-i18n-title="top">↑</button><button data-side="right" data-i18n-title="right">→</button><button data-side="bottom" data-i18n-title="bottom">↓</button><button data-side="left" data-i18n-title="left">←</button></div></div>
+        </div>
         <div class="hint" id="fl-sameHint" data-i18n="same" style="display: none"></div>
 
         <div class="field">
@@ -1283,7 +1295,10 @@
         </div>
         <div class="field">
           <div class="lbl" data-i18n="colorLbl"></div>
-          <div class="swatches" id="fl-colors"></div>
+          <div class="color-row">
+            <div class="swatches" id="fl-colors"></div>
+            <label class="opacity" data-i18n-title="opacityLbl"><input class="input" id="fl-opacity" type="number" min="10" max="100" step="5" value="100"><span>%</span></label>
+          </div>
         </div>
         <div class="hint" data-i18n="about"></div>
       </section>
@@ -1427,7 +1442,7 @@
 
 <script>
 // Only this plugin as a whole has a version; the tools inside it don't.
-const VERSION = '2.2.0';
+const VERSION = '2.3.0';
 const REPO = 'tolgakutukcu/pydedesign-figma-masterplugin';
 const RAW = 'https://raw.githubusercontent.com/' + REPO + '/main/';
 const VERSION_URL = RAW + 'version.json';
@@ -4049,7 +4064,7 @@ const Flows = (() => {
       none: 'No arrows on this page yet.', brokenList: 'Broken arrows', brokenSub: 'An end was deleted',
       deleteArrow: 'Delete', reset: 'Reset',
       exitLbl: 'Leaves', enterLbl: 'Arrives', auto: 'Auto', top: 'Top', right: 'Right', bottom: 'Bottom', left: 'Left',
-      colorLbl: 'Colour', colors: { blue: 'Blue', green: 'Green', orange: 'Orange', purple: 'Purple', red: 'Red', gray: 'Grey' }
+      opacityLbl: 'Opacity', colorLbl: 'Colour', colors: { blue: 'Blue', green: 'Green', orange: 'Orange', purple: 'Purple', red: 'Red', gray: 'Grey' }
     },
     tr: {
       back: 'Geri', appTitle: 'Akış Oluşturucu', tabMain: 'Ok', tabOverview: 'Genel bakış',
@@ -4067,7 +4082,7 @@ const Flows = (() => {
       none: 'Bu sayfada henüz ok yok.', brokenList: 'Bozuk oklar', brokenSub: 'Bir ucu silinmiş',
       deleteArrow: 'Sil', reset: 'Sıfırla',
       exitLbl: 'Çıkış', enterLbl: 'Giriş', auto: 'Otomatik', top: 'Üst', right: 'Sağ', bottom: 'Alt', left: 'Sol',
-      colorLbl: 'Renk', colors: { blue: 'Mavi', green: 'Yeşil', orange: 'Turuncu', purple: 'Mor', red: 'Kırmızı', gray: 'Gri' }
+      opacityLbl: 'Opaklık', colorLbl: 'Renk', colors: { blue: 'Mavi', green: 'Yeşil', orange: 'Turuncu', purple: 'Mor', red: 'Kırmızı', gray: 'Gri' }
     }
   };
 
@@ -4151,6 +4166,7 @@ const Flows = (() => {
       form = { from: { id: m.arrow.from, name: m.arrow.fromName }, to: { id: m.arrow.to, name: m.arrow.toName } };
       sides = { from: m.arrow.fromSide || 'auto', to: m.arrow.toSide || 'auto' };
       color = m.arrow.color || COLORS[0][1];
+      $('opacity').value = Math.round((m.arrow.opacity || 1) * 100);
       $('label').value = m.arrow.label;
       focus = null;
       lastSel = 'arrow:' + m.arrow.id;
@@ -4192,7 +4208,9 @@ const Flows = (() => {
     if ($('connect').disabled) return;
     busy = true;
     render();
-    const msg = { from: form.from.id, to: form.to.id, label: $('label').value, color, fromSide: sides.from, toSide: sides.to };
+    const op = Math.min(100, Math.max(10, Number($('opacity').value) || 100));
+    $('opacity').value = op;
+    const msg = { from: form.from.id, to: form.to.id, label: $('label').value, color, opacity: op / 100, fromSide: sides.from, toSide: sides.to };
     send(Object.assign({ f: 'flows', type: editing ? 'update' : 'create', id: editing && editing.id }, msg));
   }
 

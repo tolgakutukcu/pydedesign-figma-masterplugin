@@ -1969,6 +1969,8 @@ const Flows = (() => {
   const COLOR = '#4261EE'; // the default; the designer picks from COLORS in the UI
   const colorOf = (d) => (/^#[0-9A-F]{6}$/i.test(d.color || '') ? d.color : COLOR);
   const sideOf = (s) => (['auto', 'top', 'right', 'bottom', 'left'].indexOf(s) !== -1 ? s : 'auto');
+  // The whole arrow's opacity (line, ends and label), 0.1–1.
+  const opacityOf = (d) => (typeof d.opacity === 'number' && d.opacity >= 0.1 && d.opacity <= 1 ? Math.round(d.opacity * 100) / 100 : 1);
   const BROKEN_COLOR = '#E5484D';
   const WEIGHT = 4;
   const RADIUS = 16; // rounded corners of bent arrows
@@ -2204,9 +2206,10 @@ const Flows = (() => {
       old.forEach((c) => c.remove());
     }
     const data = Object.assign({}, d, {
-      points, sig: JSON.stringify([STYLE, points, d.label || '', !!broken, color]), broken: !!broken
+      points, sig: JSON.stringify([STYLE, points, d.label || '', !!broken, color, opacityOf(d)]), broken: !!broken
     });
     group.name = flowName(data, broken);
+    group.opacity = opacityOf(d);
     group.setSharedPluginData(NS, KEY, JSON.stringify(data));
     return group;
   }
@@ -2234,7 +2237,7 @@ const Flows = (() => {
       // Names follow renamed ends; the drawing is only redone when something actually moved.
       const next = Object.assign({}, d, { fromName: endName(from), toName: endName(to) });
       const container = containerFor(from, to);
-      const sig = container ? JSON.stringify([STYLE, route(from, to, origin(container), container, d), d.label || '', false, colorOf(d)]) : null;
+      const sig = container ? JSON.stringify([STYLE, route(from, to, origin(container), container, d), d.label || '', false, colorOf(d), opacityOf(d)]) : null;
       if (d.broken || sig !== d.sig || (container && g.parent.id !== container.id)) await render(g, next, from, to, false);
       else if (next.fromName !== d.fromName || next.toName !== d.toName) {
         g.name = flowName(next, false);
@@ -2279,7 +2282,7 @@ const Flows = (() => {
       return post('flows', {
         type: 'state', arrow: {
           id: g.id, from: d.from, to: d.to, fromName: d.fromName, toName: d.toName, label: d.label || '', broken: !!d.broken,
-          color: colorOf(d), fromSide: sideOf(d.fromSide), toSide: sideOf(d.toSide)
+          color: colorOf(d), opacity: opacityOf(d), fromSide: sideOf(d.fromSide), toSide: sideOf(d.toSide)
         }
       });
     }
@@ -2311,7 +2314,7 @@ const Flows = (() => {
     const label = String(msg.label || '').trim();
     const g = await render(null, {
       v: 1, from: e.from.id, to: e.to.id, fromName: endName(e.from), toName: endName(e.to), label,
-      color: colorOf(msg), fromSide: sideOf(msg.fromSide), toSide: sideOf(msg.toSide)
+      color: colorOf(msg), opacity: opacityOf(msg), fromSide: sideOf(msg.fromSide), toSide: sideOf(msg.toSide)
     }, e.from, e.to, false);
     figma.currentPage.selection = [g];
     figma.commitUndo();
@@ -2326,7 +2329,7 @@ const Flows = (() => {
     if (!e) return;
     const d = Object.assign({}, info(g), {
       from: e.from.id, to: e.to.id, fromName: endName(e.from), toName: endName(e.to), label: String(msg.label || '').trim(),
-      color: colorOf(msg), fromSide: sideOf(msg.fromSide), toSide: sideOf(msg.toSide)
+      color: colorOf(msg), opacity: opacityOf(msg), fromSide: sideOf(msg.fromSide), toSide: sideOf(msg.toSide)
     });
     await render(g, d, e.from, e.to, false);
     figma.commitUndo();
