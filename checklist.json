@@ -6,6 +6,7 @@
   {"id":"no-extra-page","en":"No extra page added for feature updates","tr":"Feature güncellemesi ise ekstra sayfa eklenmedi","legacy":"Feature güncellemesi ise ekstra sayfa eklenmedi"},
   {"id":"drafts","en":"Drafts cleaned up","tr":"Draft’lar temizlendi","legacy":"Draft’lar temizlendi"},
   {"id":"notes","en":"Necessary notes added","tr":"Gerekli notlar eklendi","legacy":"Gerekli notlar eklendi"},
+  {"id":"readme","en":"Design ReadMe added","tr":"Tasarım künyesi eklendi"},
   {"id":"auto-layout","en":"Auto layout / responsive design checked","tr":"Auto layout / responsive design kontrol edildi","legacy":"Auto layout / responsive design kontrol edildi"},
   {"id":"small-screen","en":"Small screen check done","tr":"Küçük ekran kontrolü yapıldı","legacy":"Küçük ekran kontrolü yapıldı"},
   {"id":"naming","en":"Root frame / section naming done","tr":"Root frame / section isimlendirmesi yapılmış","legacy":"Root frame / section isimlendirmesi yapılmış"},

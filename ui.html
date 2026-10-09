@@ -54,7 +54,7 @@
   .bar .icon-btn:hover { background: rgba(255, 255, 255, .14); color: #fff; }
   body.checking #openSettings, body.check-failed #openSettings, body.outdated #openSettings { visibility: hidden; }
   body.checking .admin, body.check-failed .admin, body.outdated .admin { display: none !important; }
-  .bar-actions { flex: none; display: flex; align-items: center; gap: 2px; }
+  .bar-actions { flex: none; display: flex; align-items: center; gap: 10px; }
   #toggleSize .i-expand, body.collapsed #toggleSize .i-collapse { display: none; }
   body.collapsed #toggleSize .i-expand { display: block; }
   /* Collapsed: the plugin is just the top bar (see COLLAPSED in code.js). Everything else is hidden. */
@@ -470,9 +470,18 @@
   #s-images .status { margin-top: 10px; min-height: 16px; font-size: 11px; color: var(--figma-color-text-secondary); text-align: center; }
 
   /* ---------- Title Maker ---------- */
-  #s-titles.no-target .placeholder { display: flex; }
-  #s-titles.no-target #tt-form { display: none; }
-  #s-titles.has-target .f-foot { display: flex; }
+  #tt-form, #tt-title, #s-titles .tidy { display: none; }
+  #s-titles.mode-none .placeholder { display: flex; padding-bottom: 32px; }
+  #s-titles.mode-ok #tt-form, #s-titles.mode-title #tt-title { display: block; }
+  #s-titles.mode-ok .f-foot { display: flex; }
+  #s-titles.has-section .tidy { display: block; }
+  #s-titles .tt-actions { display: flex; gap: 6px; margin-top: 12px; }
+  #s-titles .tidy {
+    margin-top: 20px; padding: 12px; border-radius: 10px;
+    border: 1px solid var(--figma-color-border); background: var(--figma-color-bg-secondary);
+  }
+  #s-titles .tidy .lbl { margin-bottom: 2px; color: var(--figma-color-text); }
+  #s-titles .tidy .hint { margin: 0 0 10px; }
   .check {
     display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; margin-bottom: 6px; cursor: pointer;
     border-radius: 10px; border: 1px solid var(--figma-color-border); background: var(--figma-color-bg);
@@ -482,7 +491,7 @@
   .check b { display: block; font-weight: 600; }
   .check small { display: block; margin-top: 2px; font-size: 11px; color: var(--figma-color-text-secondary); }
 
-  /* Design ReadMe: resize the section to its content */
+  /* Design ReadMe: tidy up the section */
   #s-readme .fit-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
   #s-readme .fit-row .hint { margin: 0; }
   #s-readme .fit-row .btn { flex: none; }
@@ -631,8 +640,8 @@
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M2 4.5h6M11.5 4.5H14M2 11.5h2.5M8 11.5h6"/><circle cx="9.75" cy="4.5" r="1.75"/><circle cx="6.25" cy="11.5" r="1.75"/></svg>
       </button>
       <button class="icon-btn" id="toggleSize" data-i18n-title="collapse">
-        <svg class="i-collapse" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 2.5v4h4M6.5 13.5v-4h-4M9.5 6.5l4.5-4.5M6.5 9.5L2 14"/></svg>
-        <svg class="i-expand" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2h4v4M6 14H2v-4M14 2L9.5 6.5M2 14l4.5-4.5"/></svg>
+        <svg class="i-collapse" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 10l4.5-4.5 4.5 4.5"/></svg>
+        <svg class="i-expand" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6l4.5 4.5 4.5-4.5"/></svg>
       </button>
     </div>
   </header>
@@ -742,8 +751,8 @@
             <span class="badge" id="rm-badge"></span>
           </div>
           <div class="fit-row">
-            <span class="hint" data-i18n="fitHint"></span>
-            <button class="btn small" id="rm-fit" data-i18n="fit"></button>
+            <span class="hint" data-i18n="tidyHint"></span>
+            <button class="btn small" id="rm-tidy" data-i18n="tidy"></button>
           </div>
 
           <div class="banner info" id="rm-draftBanner">
@@ -1042,7 +1051,7 @@
   </div>
 
   <!-- ==================== Title Maker ==================== -->
-  <div class="screen feature no-target" id="s-titles">
+  <div class="screen feature mode-none" id="s-titles">
     <div class="f-head">
       <div class="f-title">
         <button class="icon-btn back" data-i18n-title="back"></button>
@@ -1057,6 +1066,7 @@
         <span id="tt-phText"></span>
       </div>
 
+      <!-- Frames selected: add a title -->
       <div id="tt-form">
         <div class="target">
           <div class="ico" id="tt-targetIco"></div>
@@ -1074,14 +1084,33 @@
 
         <div class="field">
           <label class="check">
-            <input type="checkbox" id="tt-push" checked>
-            <span><b data-i18n="push"></b><small data-i18n="pushHint"></small></span>
-          </label>
-          <label class="check">
             <input type="checkbox" id="tt-align" checked>
             <span><b data-i18n="align"></b><small data-i18n="alignHint"></small></span>
           </label>
         </div>
+      </div>
+
+      <!-- A title selected -->
+      <div id="tt-title">
+        <div class="target">
+          <div class="ico" id="tt-titleIco"></div>
+          <div class="meta">
+            <div class="name" id="tt-titleName"></div>
+            <div class="sub" id="tt-titleSub"></div>
+          </div>
+        </div>
+        <div class="hint" data-i18n="titleHint"></div>
+        <div class="tt-actions">
+          <button class="btn" id="tt-restyle" data-i18n="restyle"></button>
+          <button class="btn" id="tt-alignTitle" data-i18n="alignTitle"></button>
+        </div>
+      </div>
+
+      <!-- The section of the selection: tidy it up -->
+      <div class="tidy" id="tt-tidyBox">
+        <div class="lbl" id="tt-tidyLbl"></div>
+        <div class="hint" data-i18n="tidyHint"></div>
+        <button class="btn" id="tt-tidy"></button>
       </div>
     </main>
 
@@ -1123,19 +1152,7 @@
     </div>
 
     <div id="ad-connect">
-      <p data-i18n="connectText"></p>
-      <ol>
-        <li data-i18n="step1"></li>
-        <li data-i18n="step2"></li>
-        <li data-i18n="step3"></li>
-        <li data-i18n="step4"></li>
-      </ol>
-      <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener" data-i18n="createLink"></a>
-      <div>
-        <div class="lbl" data-i18n="tokenLbl"></div>
-        <input class="input" id="ad-token" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…">
-        <div class="hint" data-i18n="tokenHint"></div>
-      </div>
+      <input class="input" id="ad-token" type="password" autocomplete="off" spellcheck="false" placeholder="Key…">
       <div class="banner err" id="ad-connectErr"></div>
       <button class="btn primary" id="ad-connectBtn" data-i18n="connect"></button>
     </div>
@@ -1217,7 +1234,7 @@
 
 <script>
 // Only this plugin as a whole has a version; the tools inside it don't.
-const VERSION = '1.7.0';
+const VERSION = '1.8.0';
 const REPO = 'tolgakutukcu/pydedesign-figma-masterplugin';
 const RAW = 'https://raw.githubusercontent.com/' + REPO + '/main/';
 const VERSION_URL = RAW + 'version.json';
@@ -1327,6 +1344,7 @@ const Checklist = (() => {
       en: 'Drafts cleaned up', tr: 'Draft’lar temizlendi' },
     { id: 'notes', legacy: 'Gerekli notlar eklendi',
       en: 'Necessary notes added', tr: 'Gerekli notlar eklendi' },
+    { id: 'readme', en: 'Design ReadMe added', tr: 'Tasarım künyesi eklendi' },
     { id: 'auto-layout', legacy: 'Auto layout / responsive design kontrol edildi',
       en: 'Auto layout / responsive design checked', tr: 'Auto layout / responsive design kontrol edildi' },
     { id: 'small-screen', legacy: 'Küçük ekran kontrolü yapıldı',
@@ -1542,7 +1560,7 @@ const ReadMe = (() => {
       ovHint: 'ReadMes on the current page are refreshed every time you open this tab. Other pages show their last known state.',
       scanAll: 'Scan all pages', scanning: 'Scanning…', all: 'All', current: 'current page',
       ovEmpty: 'No ReadMes in this file yet.', ovEmptyFilter: 'No ReadMes with this status.',
-      fit: 'Resize section', fitHint: 'Sizes the section to its content, 100 px on every side.'
+      tidy: 'Tidy up section', tidyHint: 'ReadMe top left, screen groups 48 px apart, 100 px around everything.'
     },
     tr: {
       back: 'Geri', appTitle: 'Tasarım Künyesi',
@@ -1574,7 +1592,7 @@ const ReadMe = (() => {
       ovHint: 'Bulunduğun sayfadaki künyeler bu sekmeyi her açtığında yenilenir. Diğer sayfalar bilinen son durumu gösterir.',
       scanAll: 'Tüm sayfaları tara', scanning: 'Taranıyor…', all: 'Tümü', current: 'bu sayfa',
       ovEmpty: 'Bu dosyada henüz künye yok.', ovEmptyFilter: 'Bu durumda künye yok.',
-      fit: 'Section’ı boyutlandır', fitHint: 'Section’ı içeriğine göre boyutlar, her yönden 100 px.'
+      tidy: 'Section’ı düzenle', tidyHint: 'Künye sol üstte, ekran grupları 48 px arayla, her yönden 100 px.'
     }
   };
 
@@ -2047,7 +2065,8 @@ const ReadMe = (() => {
     renderPeople();
   }
 
-  $('fit').onclick = () => { if (editing) send({ f: 'readme', type: 'fit', id: editing.id }); };
+  // Same as Title Maker's "Tidy up section".
+  $('tidy').onclick = () => { if (editing) send({ f: 'titles', type: 'tidy', id: editing.id }); };
 
   return { applyLang, onMessage, save, onLeave: hideSuggest, setTeam };
 })();
@@ -3028,13 +3047,6 @@ const Admin = (() => {
   const S = {
     en: {
       back: 'Back',
-      connectText: 'Admin edits the checklist items and the team name list, and publishes them to the GitHub repo. It needs a GitHub token that can write to the repo. The token is stored only on this computer.',
-      step1: 'Open GitHub → Settings → Developer settings → Fine-grained tokens → Generate new token.',
-      step2: 'Repository access: Only select repositories → ' + REPO.split('/')[1] + '.',
-      step3: 'Permissions → Repository permissions → Contents: Read and write.',
-      step4: 'Generate the token, copy it and paste it below.',
-      createLink: 'Open the token page on GitHub ↗',
-      tokenLbl: 'GitHub token', tokenHint: 'Kept in this plugin’s storage on this computer; never written to Figma files or the repo.',
       connect: 'Connect', connecting: 'Checking…',
       badToken: 'This token doesn’t work (wrong or expired).',
       noRepo: 'This token can’t see the repo. Check the repository access of the token.',
@@ -3066,13 +3078,6 @@ const Admin = (() => {
     },
     tr: {
       back: 'Geri',
-      connectText: 'Admin ekranında checklist maddelerini ve ekip isim listesini düzenleyip GitHub reposuna yayınlarsın. Bunun için repoya yazabilen bir GitHub token’ı gerekiyor. Token sadece bu bilgisayarda saklanır.',
-      step1: 'GitHub → Settings → Developer settings → Fine-grained tokens → Generate new token.',
-      step2: 'Repository access: Only select repositories → ' + REPO.split('/')[1] + '.',
-      step3: 'Permissions → Repository permissions → Contents: Read and write.',
-      step4: 'Token’ı oluştur, kopyala ve aşağıya yapıştır.',
-      createLink: 'GitHub’da token sayfasını aç ↗',
-      tokenLbl: 'GitHub token', tokenHint: 'Bu bilgisayarda plugin’in kendi deposunda tutulur; Figma dosyalarına ya da repoya asla yazılmaz.',
       connect: 'Bağla', connecting: 'Kontrol ediliyor…',
       badToken: 'Bu token çalışmıyor (hatalı ya da süresi dolmuş).',
       noRepo: 'Bu token repoyu göremiyor. Token’ın repository access ayarını kontrol et.',
@@ -3578,95 +3583,119 @@ const Titles = (() => {
     en: {
       back: 'Back', appTitle: 'Title Maker',
       emptyTitle: 'Select frames',
-      emptyText: 'Select one or more frames to add a title above them.',
+      emptyText: 'Select one or more frames to add a title above them, or a title to update it.',
       mixedTitle: 'Select frames in one section',
       mixedText: 'The selected frames are in different sections. A title goes above frames that sit together.',
       count: (n) => n + (n === 1 ? ' frame' : ' frames') + ' selected',
       inSection: (s) => 'in section “' + s + '”',
       titleLbl: 'Title', titlePh: 'e.g. Requirement Confirmation Dialog',
-      push: 'Push everything below down',
-      pushHint: 'The title takes the top frame’s place; the frames and everything below them in the section move down 120 px. Off: nothing moves, the title goes 48 px above the frames.',
+      afterHint: 'The title goes 48 px above the frames; nothing else moves. Edit its text on the canvas like any other text.',
       align: 'Line up the frames',
       alignHint: 'Rows follow how the frames are placed now: 48 px below the title, 48 px apart, aligned at the top. Off: the frames stay as they are.',
       add: 'Add title', adding: 'Adding…',
-      afterHint: 'Edit the title’s text on the canvas like any other text.'
+      titleSel: 'Title', below: (n) => n + (n === 1 ? ' frame' : ' frames') + ' below it',
+      titleHint: 'Edit the text on the canvas. Frames belong to the closest title above them that they overlap.',
+      restyle: 'Update style', alignTitle: 'Line up its frames',
+      tidyLbl: (s) => 'Section “' + s + '”',
+      tidy: 'Tidy up section',
+      tidyHint: 'ReadMe top left, then the screen groups 48 px apart (titles, frames and notes together), 100 px around everything.',
+      working: 'Working…'
     },
     tr: {
       back: 'Geri', appTitle: 'Başlık Ekleyici',
       emptyTitle: 'Frame seç',
-      emptyText: 'Üstüne başlık eklemek için bir veya daha fazla frame seç.',
+      emptyText: 'Üstüne başlık eklemek için bir veya daha fazla frame, güncellemek için bir başlık seç.',
       mixedTitle: 'Aynı section’daki frame’leri seç',
       mixedText: 'Seçili frame’ler farklı section’larda. Başlık, bir arada duran frame’lerin üstüne eklenir.',
       count: (n) => n + ' frame seçili',
       inSection: (s) => '“' + s + '” section’ında',
       titleLbl: 'Başlık', titlePh: 'Örn. Requirement Confirmation Dialog',
-      push: 'Altındaki her şeyi aşağı it',
-      pushHint: 'Başlık en üstteki frame’in yerine gelir; frame’ler ve section’da altlarında kalan her şey 120 px aşağı iner. Kapalıysa hiçbir şey kıpırdamaz, başlık frame’lerin 48 px üstüne konur.',
+      afterHint: 'Başlık frame’lerin 48 px üstüne konur, başka hiçbir şey kıpırdamaz. Metnini canvas’ta normal bir text gibi düzenleyebilirsin.',
       align: 'Frame’leri hizala',
       alignHint: 'Satırlar frame’lerin şu anki yerleşimine göre oluşur: başlığın 48 px altından başlar, aralarında 48 px, üstten hizalı. Kapalıysa frame’lere dokunulmaz.',
       add: 'Başlık ekle', adding: 'Ekleniyor…',
-      afterHint: 'Başlığın metnini canvas’ta normal bir text gibi düzenleyebilirsin.'
+      titleSel: 'Başlık', below: (n) => 'Altında ' + n + ' frame',
+      titleHint: 'Metni canvas’ta düzenle. Bir frame, üstündeki ve yatayda çakıştığı en yakın başlığa aittir.',
+      restyle: 'Stili güncelle', alignTitle: 'Frame’lerini hizala',
+      tidyLbl: (s) => '“' + s + '” section’ı',
+      tidy: 'Section’ı düzenle',
+      tidyHint: 'Künye sol üstte, ardından ekran grupları 48 px arayla (başlıklar, frame’ler ve notlar birlikte), her yönden 100 px boşluk.',
+      working: 'Düzenleniyor…'
     }
   };
 
   const ICON_FRAMES = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><rect x="2" y="2" width="8" height="8" rx="1"/><path d="M6 13h7a1 1 0 0 0 1-1V5"/></svg>';
+  const ICON_TITLE = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><rect x="2" y="4" width="12" height="8" rx="1.5"/><path d="M5 8h6" stroke-linecap="round"/></svg>';
   const t = () => S[lang];
   let lastState = { status: 'none' };
-  let busy = false;
+  let busy = null; // the action being run
 
   function render(m) {
     lastState = m;
-    root.classList.toggle('no-target', m.status !== 'ok');
-    root.classList.toggle('has-target', m.status === 'ok');
-    if (m.status !== 'ok') {
+    const cl = root.classList;
+    ['none', 'ok', 'title'].forEach((k) => cl.toggle('mode-' + k, (m.status === 'mixed' ? 'none' : m.status) === k));
+    cl.toggle('has-section', !!m.tidy);
+    if (m.tidy) $('tidyLbl').textContent = t().tidyLbl(m.tidy.name);
+
+    if (m.status === 'none' || m.status === 'mixed') {
       $('phIco').innerHTML = POINTER;
       $('phTitle').textContent = t()[m.status === 'mixed' ? 'mixedTitle' : 'emptyTitle'];
       $('phText').textContent = t()[m.status === 'mixed' ? 'mixedText' : 'emptyText'];
-      return;
+    } else if (m.status === 'title') {
+      $('titleIco').innerHTML = ICON_TITLE;
+      $('titleName').textContent = m.title.text;
+      $('titleSub').textContent = t().titleSel + ' · ' + t().below(m.title.frames);
+      $('alignTitle').disabled = !!busy || !m.title.frames;
+    } else {
+      $('targetIco').innerHTML = ICON_FRAMES;
+      $('targetName').textContent = m.name || t().count(m.count);
+      $('targetSub').textContent = (m.name ? t().count(m.count) + ' · ' : '') + (m.section ? t().inSection(m.section) : m.page);
     }
-    $('targetIco').innerHTML = ICON_FRAMES;
-    $('targetName').textContent = m.name || t().count(m.count);
-    $('targetSub').textContent = (m.name ? t().count(m.count) + ' · ' : '') + (m.section ? t().inSection(m.section) : m.page);
-    renderFooter();
+    renderButtons();
   }
 
-  function renderFooter() {
-    $('add').textContent = busy ? t().adding : t().add;
-    $('add').disabled = busy || lastState.status !== 'ok' || !$('text').value.trim();
+  function renderButtons() {
+    $('add').textContent = busy === 'add' ? t().adding : t().add;
+    $('add').disabled = !!busy || lastState.status !== 'ok' || !$('text').value.trim();
+    $('restyle').disabled = !!busy;
+    $('tidy').textContent = busy === 'tidy' ? t().working : t().tidy;
+    $('tidy').disabled = !!busy;
   }
 
-  function savePrefs() {
-    send({ f: 'titles', type: 'setPrefs', push: $('push').checked, align: $('align').checked });
+  function run(type, extra) {
+    if (busy) return;
+    busy = type;
+    renderButtons();
+    send(Object.assign({ f: 'titles', type }, extra));
   }
 
   function add() {
     if ($('add').disabled) return;
-    busy = true;
-    renderFooter();
-    send({ f: 'titles', type: 'add', text: $('text').value, push: $('push').checked, align: $('align').checked });
+    run('add', { text: $('text').value, align: $('align').checked });
   }
 
   function applyLang() {
     translate(root, t());
     render(lastState);
-    renderFooter();
   }
 
   function onMessage(m) {
     if (m.type === 'state') render(m);
-    else if (m.type === 'prefs') { $('push').checked = m.push; $('align').checked = m.align; }
+    else if (m.type === 'prefs') $('align').checked = m.align;
     else if (m.type === 'done' || m.type === 'error') {
-      if (m.type === 'done') $('text').value = '';
-      busy = false;
-      renderFooter();
+      if (m.type === 'done' && m.action === 'add') $('text').value = '';
+      busy = null;
+      renderButtons();
     }
   }
 
-  $('text').oninput = renderFooter;
+  $('text').oninput = renderButtons;
   $('text').onkeydown = (e) => { if (e.key === 'Enter') add(); };
-  $('push').onchange = savePrefs;
-  $('align').onchange = savePrefs;
+  $('align').onchange = () => send({ f: 'titles', type: 'setPrefs', align: $('align').checked });
   $('add').onclick = add;
+  $('restyle').onclick = () => { if (lastState.title) run('restyle', { id: lastState.title.id }); };
+  $('alignTitle').onclick = () => { if (lastState.title) run('alignTitle', { id: lastState.title.id }); };
+  $('tidy').onclick = () => { if (lastState.tidy) run('tidy', { id: lastState.tidy.id }); };
 
   return { applyLang, onMessage, save: add };
 })();

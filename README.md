@@ -50,7 +50,7 @@ Settings → **Admin** (the small link at the bottom) edits the checklist items 
 
 Publishing commits straight to `main` (one commit per publish, so GitHub history shows every change). Others get it the next time they open the plugin; GitHub's raw files can take a few minutes to update. If the file changed on GitHub in the meantime, nothing is published: **Discard** loads the latest version.
 
-It needs a GitHub **fine-grained personal access token** with access to this repository only and *Contents: Read and write*. The Admin screen explains how to create it. The token is kept only in this plugin's storage on the admin's computer, never in Figma files or the repo. **Disconnect** deletes it.
+It needs a GitHub **fine-grained personal access token** with access to this repository only and *Contents: Read and write*. To create one: GitHub → Settings → Developer settings → Fine-grained tokens → Generate new token; *Repository access*: only this repository; *Permissions*: Contents → Read and write. Paste it into the Admin screen's key field. The token is kept only in this plugin's storage on the admin's computer, never in Figma files or the repo. **Disconnect** deletes it.
 
 ## Handoff Pre Checklist
 
@@ -84,7 +84,7 @@ Don't edit the card's text by hand — it is redrawn from the form on every save
 
 The section name shows its status after an em dash, updated on every save: `Checkout Flow — 🚧 Work in progress`, `— 👀 In review`, `— ✅ Ready for development`. Removing the ReadMe removes the suffix.
 
-**Resize section** (under the selected section) sizes the section to its content with 100 px on every side, the same as Figma's own *Resize to fit* for sections. The content keeps its place on the canvas; the section moves and resizes around it. It works on any section, with or without a ReadMe.
+**Tidy up section** (under the selected section) is the same as in Title Maker (see below). It works on any section, with or without a ReadMe.
 
 The **Overview** tab lists every ReadMe in the file. The current page is rescanned each time you open the tab; other pages show their last known state. **Scan all pages** refreshes everything.
 
@@ -116,12 +116,21 @@ The card appears right below the frame, exactly as wide as the frame, in the sam
 
 ## Title Maker
 
-Select one or more frames (in the same section, or all directly on the page), type the title and click **Add title** (or press Enter).
+**Adding a title**: select one or more frames (in the same section, or all directly on the page), type the title and click **Add title** (or press Enter). The title goes 48 px above the top frame and is as wide as the frames; nothing else moves. If it covers something there, the plugin says so — **Tidy up section** makes room.
 
-- **Push everything below down** (on by default): the title takes the top frame's place, and the selected frames and everything below them in the section (or on the page) move down 120 px (72 px title + 48 px gap). The section grows by the same amount. Off: nothing moves and the title goes 48 px above the top frame; the plugin warns if it covers something there, and grows the section upwards if the title sticks out of its top.
-- **Line up the frames** (on by default): rows follow how the frames are placed now (frames that overlap vertically are one row). Each row starts 48 px below the title (or the row above), frames are 48 px apart and aligned at the top. A frame with a Frame Note counts together with its card, so notes never land on the next row. If this makes the group taller, the content below moves down by the difference too.
+- **Line up the frames** (on by default, remembered per person): rows follow how the frames are placed now (frames that overlap vertically are one row). The rows start 48 px below the title, frames are 48 px apart and aligned at the top. A frame with a Frame Note counts together with its card, so notes never land on the next row.
 
-The title is as wide as the frames (the widest row when lined up). It is a frame named `🏷 Title` with one text layer: DM Sans Semi Bold 34 / 36, white, on a `#7B7D83` → `#5C5E66` gradient with a white 60% border and 8 px corners. Edit its text on the canvas like any other text; copying a title is fine. The two checkboxes are remembered per person.
+**A selected title** (or its text) is recognised: **Update style** brings an older or hand-made title to the current style (keeping its text), and **Line up its frames** lines up the frames below it and fits the title to them. A frame belongs to the closest title above it that it overlaps horizontally, so copied titles work too.
+
+**Tidy up section** (also on the Design ReadMe screen) rearranges the section the selection is in:
+
+- The Design ReadMe card goes to the top-left corner, 100 px from the edges.
+- The screen groups start 100 px below the ReadMe (or 100 px from the top). A group is a title with its frames, or a frame on its own. Groups are laid out in rows that follow how they are placed now, 48 px apart both ways.
+- Inside a group, the frames are lined up 48 px below the title, 48 px apart, and the title is as wide as them.
+- A frame moves with its Frame Note card, and loose layers (text, arrows, shapes…) move with the frame they sit closest to. Nested sections, groups and component sets move as one piece.
+- The section is sized to 100 px around its content (like Figma's own *Resize to fit*); the section itself stays in place. One ⌘Z / Ctrl+Z undoes it all.
+
+The title is a frame named `🏷 Title` with one text layer: DM Sans Semi Bold 34 / 36 in white on a `#7B7D83` → `#5C5E66` gradient (top to bottom), with a 1 px white stroke fading from 40% at the top to 0 at the bottom and 8 px corners. Edit its text on the canvas like any other text; copying a title is fine.
 
 ## Image Optimizer
 
