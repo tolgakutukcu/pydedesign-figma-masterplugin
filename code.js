@@ -2553,9 +2553,12 @@ const Titles = (() => {
   function setTitleWidth(title, width) {
     if (Math.abs(title.width - width) < 0.01) return;
     title.resize(Math.max(1, width), title.height);
-    // resize() fixes both sizes; the height goes back to hugging the text.
-    title.primaryAxisSizingMode = 'FIXED';
-    title.counterAxisSizingMode = 'AUTO';
+    // resize() fixes both sizes; the height goes back to hugging the text. (An old, hand-made title
+    // may have no auto layout.)
+    if (title.layoutMode && title.layoutMode !== 'NONE') {
+      title.primaryAxisSizingMode = 'FIXED';
+      title.counterAxisSizingMode = 'AUTO';
+    }
   }
 
   // Grows a section (never shrinks it) so its content keeps PAD from every edge, upwards too when
@@ -2732,8 +2735,11 @@ const Titles = (() => {
     const readme = kids.find((c) => isReadmeCard(c) && (() => {
       try { return JSON.parse(c.getSharedPluginData('pydespec', 'card')).kind !== 'frame'; } catch (e) { return true; }
     })());
-    const titles = kids.filter(isTitle);
-    const blocks = kids.filter(isUnit).map(makeBlock);
+    // Old, hand-made titles that haven't been converted yet count as titles too (their look stays).
+    const old = kids.filter((c) => !isTitle(c) && looksLikeTitle(c, kids));
+    const titles = kids.filter(isTitle).concat(old);
+    const oldIds = new Set(old.map((c) => c.id));
+    const blocks = kids.filter((c) => isUnit(c) && !oldIds.has(c.id)).map(makeBlock);
     const used = new Set();
     blocks.forEach((b) => b.nodes.forEach((n) => used.add(n.id)));
     titles.forEach((tl) => used.add(tl.id));
@@ -2801,7 +2807,10 @@ const Titles = (() => {
     const box = bbox(content.length ? content : section.children);
     section.resizeWithoutConstraints(Math.max(1, box.x + box.width + PAD), Math.max(1, box.y + box.height + PAD));
     figma.commitUndo();
-    figma.notify(t('Section tidied up', 'Section düzenlendi'));
+    figma.notify(old.length
+      ? t('Section tidied up. ' + old.length + ' old ' + (old.length === 1 ? 'title was' : 'titles were') + ' treated as titles; convert them in the Overview tab.',
+        'Section düzenlendi. ' + old.length + ' eski başlık, başlık olarak dizildi; Genel bakış’tan dönüştürebilirsin.')
+      : t('Section tidied up', 'Section düzenlendi'));
   }
 
   // ---------- Old titles ----------
