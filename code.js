@@ -1961,7 +1961,8 @@ const Titles = (() => {
   const NS = 'pydetitle'; // namespace may only contain letters and digits
   const KEY = 'title';
   const NAME = '🏷 Title';
-  const GAP = 48;  // between a title and its frames, between frames, and between screen groups
+  const GAP = 48;        // between a title and its frames, and between frames in a group
+  const GROUP_GAP = 200; // between screen groups when tidying up a section, both ways
   const PAD = 100; // around a section's content, like Figma's own "Resize to fit" for sections
   const SCREEN_TYPES = ['FRAME', 'COMPONENT', 'COMPONENT_SET', 'INSTANCE'];
   // What tidying up moves as a unit (with its note card and the loose layers next to it).
@@ -2072,8 +2073,9 @@ const Titles = (() => {
 
   // Lays items out in rows that follow how they are placed now: an item whose top is above the middle of
   // a row's shortest item belongs to that row. Rows go left to right, GAP apart, aligned at the top.
-  // Each item is { box: {x, y, width, height}, place(x, y) }. Returns the size taken.
-  function arrangeRows(items, left, top) {
+  // Each item is { box: {x, y, width, height}, place(x, y) }. `gap` defaults to GAP. Returns the size taken.
+  function arrangeRows(items, left, top, gap) {
+    if (gap === undefined) gap = GAP;
     const sorted = items.slice().sort((a, b) => a.box.y - b.box.y || a.box.x - b.box.x);
     const rows = [];
     for (const it of sorted) {
@@ -2091,13 +2093,13 @@ const Titles = (() => {
       let x = left, h = 0;
       for (const it of row.items) {
         it.place(x, y);
-        x += it.box.width + GAP;
+        x += it.box.width + gap;
         h = Math.max(h, it.box.height);
       }
-      width = Math.max(width, x - GAP - left);
-      y += h + GAP;
+      width = Math.max(width, x - gap - left);
+      y += h + gap;
     }
-    return { width, height: rows.length ? y - GAP - top : 0 };
+    return { width, height: rows.length ? y - gap - top : 0 };
   }
 
   function blockItem(block, place) {
@@ -2269,7 +2271,7 @@ const Titles = (() => {
   // Tidies up a section:
   //  - the Design ReadMe card goes to the top-left corner, PAD from the edges;
   //  - screen groups (a title with its frames, or a frame on its own) start PAD below the ReadMe (or at
-  //    the top), in rows that follow how they are placed now, GAP apart both ways;
+  //    the top), in rows that follow how they are placed now, GROUP_GAP apart both ways;
   //  - inside a group, the frames are lined up GAP below the title, GAP apart;
   //  - a frame moves with its Frame Note card, and loose layers (text, arrows, shapes…) with the frame
   //    they sit closest to;
@@ -2344,7 +2346,7 @@ const Titles = (() => {
         }
         for (const m of g.moves) moveNodes(m.nodes, x + m.x - m.box.x, y + m.y - m.box.y);
       }
-    })), PAD, top);
+    })), PAD, top, GROUP_GAP);
 
     const box = bbox(section.children);
     section.resizeWithoutConstraints(Math.max(1, box.x + box.width + PAD), Math.max(1, box.y + box.height + PAD));

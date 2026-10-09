@@ -1279,7 +1279,7 @@
 
 <script>
 // Only this plugin as a whole has a version; the tools inside it don't.
-const VERSION = '1.9.0';
+const VERSION = '1.9.1';
 const REPO = 'tolgakutukcu/pydedesign-figma-masterplugin';
 const RAW = 'https://raw.githubusercontent.com/' + REPO + '/main/';
 const VERSION_URL = RAW + 'version.json';
@@ -1605,7 +1605,7 @@ const ReadMe = (() => {
       ovHint: 'ReadMes on the current page are refreshed every time you open this tab. Other pages show their last known state.',
       scanAll: 'Scan all pages', scanning: 'Scanning…', all: 'All', current: 'current page',
       ovEmpty: 'No ReadMes in this file yet.', ovEmptyFilter: 'No ReadMes with this status.',
-      tidy: 'Tidy up section', tidyHint: 'ReadMe top left, screen groups 48 px apart, 100 px around everything.'
+      tidy: 'Tidy up section', tidyHint: 'ReadMe top left, screen groups 200 px apart, 100 px around everything.'
     },
     tr: {
       back: 'Geri', appTitle: 'Tasarım Künyesi',
@@ -1637,7 +1637,7 @@ const ReadMe = (() => {
       ovHint: 'Bulunduğun sayfadaki künyeler bu sekmeyi her açtığında yenilenir. Diğer sayfalar bilinen son durumu gösterir.',
       scanAll: 'Tüm sayfaları tara', scanning: 'Taranıyor…', all: 'Tümü', current: 'bu sayfa',
       ovEmpty: 'Bu dosyada henüz künye yok.', ovEmptyFilter: 'Bu durumda künye yok.',
-      tidy: 'Section’ı düzenle', tidyHint: 'Künye sol üstte, ekran grupları 48 px arayla, her yönden 100 px.'
+      tidy: 'Section’ı düzenle', tidyHint: 'Künye sol üstte, ekran grupları 200 px arayla, her yönden 100 px.'
     }
   };
 
@@ -3643,7 +3643,7 @@ const Titles = (() => {
       restyle: 'Update style', alignTitle: 'Line up its frames',
       tidyLbl: (s) => 'Section “' + s + '”',
       tidy: 'Tidy up section',
-      tidyHint: 'ReadMe top left, then the screen groups 48 px apart (titles, frames and notes together), 100 px around everything.',
+      tidyHint: 'ReadMe top left, then the screen groups 200 px apart (titles, frames and notes together), frames 48 px apart inside them, 100 px around everything.',
       working: 'Working…',
       tabMain: 'Title', tabOverview: 'Overview',
       oldOne: 'Looks like an old title',
@@ -3675,7 +3675,7 @@ const Titles = (() => {
       restyle: 'Stili güncelle', alignTitle: 'Frame’lerini hizala',
       tidyLbl: (s) => '“' + s + '” section’ı',
       tidy: 'Section’ı düzenle',
-      tidyHint: 'Künye sol üstte, ardından ekran grupları 48 px arayla (başlıklar, frame’ler ve notlar birlikte), her yönden 100 px boşluk.',
+      tidyHint: 'Künye sol üstte, ardından ekran grupları 200 px arayla (başlıklar, frame’ler ve notlar birlikte), grup içinde frame’ler 48 px arayla, her yönden 100 px boşluk.',
       working: 'Düzenleniyor…',
       tabMain: 'Başlık', tabOverview: 'Genel bakış',
       oldOne: 'Eski bir başlık gibi görünüyor',

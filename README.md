@@ -127,7 +127,7 @@ The card appears right below the frame, exactly as wide as the frame, in the sam
 **Tidy up section** (also on the Design ReadMe screen) rearranges the section the selection is in:
 
 - The Design ReadMe card goes to the top-left corner, 100 px from the edges.
-- The screen groups start 100 px below the ReadMe (or 100 px from the top). A group is a title with its frames, or a frame on its own. Groups are laid out in rows that follow how they are placed now, 48 px apart both ways.
+- The screen groups start 100 px below the ReadMe (or 100 px from the top). A group is a title with its frames, or a frame on its own. Groups are laid out in rows that follow how they are placed now, 200 px apart both ways.
 - Inside a group, the frames are lined up 48 px below the title, 48 px apart, and the title is as wide as them.
 - A frame moves with its Frame Note card, and loose layers (text, arrows, shapes…) move with the frame they sit closest to. Nested sections, groups and component sets move as one piece.
 - The section is sized to 100 px around its content (like Figma's own *Resize to fit*); the section itself stays in place. One ⌘Z / Ctrl+Z undoes it all.
