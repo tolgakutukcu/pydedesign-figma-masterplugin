@@ -566,6 +566,17 @@
   #s-flows .counts b { color: var(--figma-color-text); }
   #s-flows .banner { margin: 0 0 12px; }
   #s-flows .banner .actions { margin-top: 6px; }
+  #s-flows .side-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+  #s-flows .side-row > span { flex: none; width: 52px; font-size: 11px; color: var(--figma-color-text-secondary); }
+  #s-flows .seg.sides { flex: 1; padding: 2px; gap: 2px; }
+  #s-flows .seg.sides button { padding: 3px 0; font-size: 12px; }
+  #s-flows .seg.sides button[data-side="auto"] { flex: 1.6; font-size: 11px; }
+  #s-flows .swatches { display: flex; gap: 8px; }
+  #s-flows .swatches button {
+    width: 26px; height: 26px; padding: 0; border-radius: 50%; cursor: pointer;
+    border: 2px solid var(--figma-color-bg); box-shadow: 0 0 0 1px var(--figma-color-border);
+  }
+  #s-flows .swatches button.on { box-shadow: 0 0 0 2px var(--figma-color-text); }
 
   /* Design ReadMe: tidy up the section */
   #s-readme .fit-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
@@ -1256,17 +1267,23 @@
         <div class="lbl" data-i18n="from"></div>
         <button class="pick" id="fl-from"><div class="meta"><div class="f-name"></div><div class="f-sub"></div></div></button>
         <div class="pick-hint" id="fl-fromHint"></div>
+        <div class="side-row"><span data-i18n="exitLbl"></span><div class="seg sides" id="fl-fromSide"><button data-side="auto" data-i18n="auto"></button><button data-side="top" data-i18n-title="top">↑</button><button data-side="right" data-i18n-title="right">→</button><button data-side="bottom" data-i18n-title="bottom">↓</button><button data-side="left" data-i18n-title="left">←</button></div></div>
 
         <div class="swap-row"><button class="icon-btn" id="fl-swap" data-i18n-title="swap"></button></div>
 
         <div class="lbl" data-i18n="to"></div>
         <button class="pick" id="fl-to"><div class="meta"><div class="f-name"></div><div class="f-sub"></div></div></button>
         <div class="pick-hint" id="fl-toHint"></div>
+        <div class="side-row"><span data-i18n="enterLbl"></span><div class="seg sides" id="fl-toSide"><button data-side="auto" data-i18n="auto"></button><button data-side="top" data-i18n-title="top">↑</button><button data-side="right" data-i18n-title="right">→</button><button data-side="bottom" data-i18n-title="bottom">↓</button><button data-side="left" data-i18n-title="left">←</button></div></div>
         <div class="hint" id="fl-sameHint" data-i18n="same" style="display: none"></div>
 
         <div class="field">
           <div class="lbl" data-i18n="labelLbl"></div>
           <input class="input" id="fl-label" data-i18n-placeholder="labelPh">
+        </div>
+        <div class="field">
+          <div class="lbl" data-i18n="colorLbl"></div>
+          <div class="swatches" id="fl-colors"></div>
         </div>
         <div class="hint" data-i18n="about"></div>
       </section>
@@ -1410,7 +1427,7 @@
 
 <script>
 // Only this plugin as a whole has a version; the tools inside it don't.
-const VERSION = '2.1.2';
+const VERSION = '2.2.0';
 const REPO = 'tolgakutukcu/pydedesign-figma-masterplugin';
 const RAW = 'https://raw.githubusercontent.com/' + REPO + '/main/';
 const VERSION_URL = RAW + 'version.json';
@@ -4030,7 +4047,9 @@ const Flows = (() => {
       same: 'From and To must be different layers.',
       counts: (n, p) => '<b>' + n + '</b> ' + (n === 1 ? 'arrow' : 'arrows') + ' on “' + p + '”',
       none: 'No arrows on this page yet.', brokenList: 'Broken arrows', brokenSub: 'An end was deleted',
-      deleteArrow: 'Delete', reset: 'Reset'
+      deleteArrow: 'Delete', reset: 'Reset',
+      exitLbl: 'Leaves', enterLbl: 'Arrives', auto: 'Auto', top: 'Top', right: 'Right', bottom: 'Bottom', left: 'Left',
+      colorLbl: 'Colour', colors: { blue: 'Blue', green: 'Green', orange: 'Orange', purple: 'Purple', red: 'Red', gray: 'Grey' }
     },
     tr: {
       back: 'Geri', appTitle: 'Akış Oluşturucu', tabMain: 'Ok', tabOverview: 'Genel bakış',
@@ -4046,7 +4065,9 @@ const Flows = (() => {
       same: 'Nereden ve Nereye farklı katmanlar olmalı.',
       counts: (n, p) => '“' + p + '” sayfasında <b>' + n + '</b> ok',
       none: 'Bu sayfada henüz ok yok.', brokenList: 'Bozuk oklar', brokenSub: 'Bir ucu silinmiş',
-      deleteArrow: 'Sil', reset: 'Sıfırla'
+      deleteArrow: 'Sil', reset: 'Sıfırla',
+      exitLbl: 'Çıkış', enterLbl: 'Giriş', auto: 'Otomatik', top: 'Üst', right: 'Sağ', bottom: 'Alt', left: 'Sol',
+      colorLbl: 'Renk', colors: { blue: 'Mavi', green: 'Yeşil', orange: 'Turuncu', purple: 'Mor', red: 'Kırmızı', gray: 'Gri' }
     }
   };
 
@@ -4055,7 +4076,11 @@ const Flows = (() => {
   const t = () => S[lang];
 
   // The arrow being made or edited. `focus` is the field the next canvas selection goes into.
+  // Arrow colours; blue is the default. The last one picked stays for the next arrow.
+  const COLORS = [['blue', '#4261EE'], ['green', '#14A367'], ['orange', '#E8590C'], ['purple', '#7C5CFF'], ['red', '#E5484D'], ['gray', '#5C5E66']];
   let form = { from: null, to: null };
+  let sides = { from: 'auto', to: 'auto' };
+  let color = COLORS[0][1];
   let focus = 'from';
   let editing = null; // { id, broken } while a selected arrow is edited
   let lastSel = '';   // the selection already used, so the same selection isn't applied twice
@@ -4076,7 +4101,26 @@ const Flows = (() => {
     $(k + 'Hint').textContent = focus === k ? (k === 'from' ? t().pickFrom : t().pickTo) + ' — ' + t().pickHint : '';
   }
 
+  function renderOptions() {
+    ['from', 'to'].forEach((k) => $(k + 'Side').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.side === sides[k])));
+    const box = $('colors');
+    if (!box.children.length) {
+      COLORS.forEach(([name, hex]) => {
+        const b = document.createElement('button');
+        b.dataset.color = hex;
+        b.style.background = hex;
+        b.onclick = () => { color = hex; render(); };
+        box.append(b);
+      });
+    }
+    box.querySelectorAll('button').forEach((b) => {
+      b.classList.toggle('on', b.dataset.color.toLowerCase() === color.toLowerCase());
+      b.title = t().colors[COLORS.find((c) => c[1] === b.dataset.color)[0]];
+    });
+  }
+
   function render() {
+    renderOptions();
     renderField('from');
     renderField('to');
     root.classList.toggle('editing', !!editing);
@@ -4094,6 +4138,7 @@ const Flows = (() => {
   function reset() {
     editing = null;
     form = { from: null, to: null };
+    sides = { from: 'auto', to: 'auto' };
     $('label').value = '';
     focus = 'from';
   }
@@ -4104,6 +4149,8 @@ const Flows = (() => {
       if (focus && editing && editing.id === m.arrow.id) return render();
       editing = { id: m.arrow.id, broken: m.arrow.broken };
       form = { from: { id: m.arrow.from, name: m.arrow.fromName }, to: { id: m.arrow.to, name: m.arrow.toName } };
+      sides = { from: m.arrow.fromSide || 'auto', to: m.arrow.toSide || 'auto' };
+      color = m.arrow.color || COLORS[0][1];
       $('label').value = m.arrow.label;
       focus = null;
       lastSel = 'arrow:' + m.arrow.id;
@@ -4145,7 +4192,7 @@ const Flows = (() => {
     if ($('connect').disabled) return;
     busy = true;
     render();
-    const msg = { from: form.from.id, to: form.to.id, label: $('label').value };
+    const msg = { from: form.from.id, to: form.to.id, label: $('label').value, color, fromSide: sides.from, toSide: sides.to };
     send(Object.assign({ f: 'flows', type: editing ? 'update' : 'create', id: editing && editing.id }, msg));
   }
 
@@ -4231,7 +4278,10 @@ const Flows = (() => {
     $(k).onclick = () => { focus = focus === k ? null : k; lastSel = ''; render(); };
   });
   $('swap').innerHTML = SWAP;
-  $('swap').onclick = () => { form = { from: form.to, to: form.from }; render(); };
+  $('swap').onclick = () => { form = { from: form.to, to: form.from }; sides = { from: sides.to, to: sides.from }; render(); };
+  ['from', 'to'].forEach((k) => $(k + 'Side').querySelectorAll('button').forEach((b) => {
+    b.onclick = () => { sides[k] = b.dataset.side; render(); };
+  }));
   $('connect').onclick = submit;
   $('remove').onclick = () => { if (editing && !busy) { busy = true; render(); send({ f: 'flows', type: 'remove', id: editing.id }); } };
   $('newArrow').onclick = () => { reset(); lastSel = ''; render(); };

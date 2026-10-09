@@ -140,10 +140,11 @@ The title is a frame named `🏷 Title` with one text layer: DM Sans Semi Bold 3
 Connects two layers with an arrow: **From** and **To** can be frames, or any object inside them (a button, a row…).
 
 - Selecting a layer on the canvas fills the field that is waiting (the highlighted one): first **From**, then **To**. Selecting two layers fills both (left / top one first). Click a field to choose it again; ⇅ swaps them.
-- Add a **Label** if you like (e.g. "Tap Continue") and click **Connect**.
+- Under each field, **Leaves** / **Arrives** picks the side the arrow uses: **Auto**, or top / right / bottom / left.
+- Add a **Label** if you like (e.g. "Tap Continue"), pick a **Colour** (blue, green, orange, purple, red, grey; the last one picked stays) and click **Connect**.
 - Selecting an arrow opens it for editing: change its ends or label and **Save changes**, or **Delete** it. **New arrow** starts over.
 
-The arrow (Pyde blue, 4 px, a dot where it starts and a filled triangle where it ends, label in a blue tag with 8 px corners) goes from edge to edge: right to left when the ends are side by side, bottom to top when one is above the other, bending at right angles when they don't line up. It is a group named after what it connects, with node ids, so Figma MCP / Claude can read the flow:
+The arrow (4 px, a dot where it starts and a filled triangle where it ends, label in a tag of the same colour with 8 px corners) leaves from the middle of a side, goes out a short stub and takes a right-angled path to the other end. Of all the possible paths, it picks the one that crosses no other screen (or any other layer in the section), then the shortest with the fewest bends; it only goes over a screen when there's no way around. **Auto** sides try all four sides and keep the best path. It is a group named after what it connects, with node ids, so Figma MCP / Claude can read the flow:
 
 ```
 ➜ Flow: Login › Continue (12:40) → Home (56:78) · "Tap Continue"

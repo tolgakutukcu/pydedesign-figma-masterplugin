@@ -1966,7 +1966,9 @@ const Flows = (() => {
   const KEY = 'flow';
   const PREFIX = '➜ Flow: ';
   const BROKEN_PREFIX = '➜ Flow (broken): ';
-  const COLOR = '#4261EE';
+  const COLOR = '#4261EE'; // the default; the designer picks from COLORS in the UI
+  const colorOf = (d) => (/^#[0-9A-F]{6}$/i.test(d.color || '') ? d.color : COLOR);
+  const sideOf = (s) => (['auto', 'top', 'right', 'bottom', 'left'].indexOf(s) !== -1 ? s : 'auto');
   const BROKEN_COLOR = '#E5484D';
   const WEIGHT = 4;
   const RADIUS = 16; // rounded corners of bent arrows
@@ -2022,36 +2024,108 @@ const Flows = (() => {
   }
 
   // ---------- Route ----------
+  // The arrow leaves its start from the middle of a side (right / left / top / bottom), goes out a short
+  // stub, then takes a right-angled path to a stub in front of the end's side. "auto" sides try all four.
+  // Every possible path is scored, and the cheapest one wins:
+  //  - crossing another screen (or any other layer in the section) costs the most,
+  //  - crossing an end itself costs a lot; crossing the frame an end sits in (a button's screen) a little,
+  //  - then length and the number of bends.
+  // So arrows go around screens when they can, and straight over them only when there's no way around.
 
-  // The arrow's points (in the container's coordinates), from edge to edge:
-  //  - side by side: from the right (or left) edge middle of one to the facing edge middle of the other;
-  //  - one above the other: from the bottom (or top) edge middle to the facing edge middle;
-  //  - when they don't line up, the arrow bends at right angles halfway.
-  function route(a, b, o) {
-    const A = a.absoluteBoundingBox, B = b.absoluteBoundingBox;
-    const box = (r) => ({ l: r.x - o.x, t: r.y - o.y, r: r.x + r.width - o.x, b: r.y + r.height - o.y, cx: r.x + r.width / 2 - o.x, cy: r.y + r.height / 2 - o.y });
-    const p = box(A), q = box(B);
-    let s, e, horizontal = true;
-    if (q.l >= p.r) { s = { x: p.r, y: p.cy }; e = { x: q.l, y: q.cy }; }
-    else if (q.r <= p.l) { s = { x: p.l, y: p.cy }; e = { x: q.r, y: q.cy }; }
-    else if (q.t >= p.b) { s = { x: p.cx, y: p.b }; e = { x: q.cx, y: q.t }; horizontal = false; }
-    else if (q.b <= p.t) { s = { x: p.cx, y: p.t }; e = { x: q.cx, y: q.b }; horizontal = false; }
-    else { s = { x: p.r, y: p.cy }; e = { x: q.l, y: q.cy }; } // overlapping: right edge to left edge
-    const r = (n) => Math.round(n * 10) / 10;
-    s = { x: r(s.x), y: r(s.y) };
-    e = { x: r(e.x), y: r(e.y) };
-    if (horizontal ? Math.abs(s.y - e.y) < 0.5 : Math.abs(s.x - e.x) < 0.5) return [s, e];
-    if (horizontal) {
-      const mx = r((s.x + e.x) / 2);
-      return [s, { x: mx, y: s.y }, { x: mx, y: e.y }, e];
+  const SIDES = ['right', 'left', 'bottom', 'top'];
+  const NORMAL = { right: { x: 1, y: 0 }, left: { x: -1, y: 0 }, bottom: { x: 0, y: 1 }, top: { x: 0, y: -1 } };
+  const STUB = 24;   // how far the arrow goes straight out of a side before turning
+  const MARGIN = 32; // how far from a layer a detour runs
+  const COST = { other: 10000, end: 3000, own: 20, bend: 40 };
+
+  function rectOf(node, o) {
+    const r = node.absoluteBoundingBox;
+    return { l: r.x - o.x, t: r.y - o.y, r: r.x + r.width - o.x, b: r.y + r.height - o.y };
+  }
+  function sidePoint(R, side) {
+    const cx = (R.l + R.r) / 2, cy = (R.t + R.b) / 2;
+    return side === 'right' ? { x: R.r, y: cy } : side === 'left' ? { x: R.l, y: cy }
+      : side === 'bottom' ? { x: cx, y: R.b } : { x: cx, y: R.t };
+  }
+  // Does the axis-aligned segment a–b run through the inside of R (touching its edge doesn't count)?
+  function crosses(a, b, R) {
+    const e = 0.5;
+    if (Math.abs(a.y - b.y) < e) {
+      if (a.y <= R.t + e || a.y >= R.b - e) return false;
+      return Math.max(a.x, b.x) > R.l + e && Math.min(a.x, b.x) < R.r - e;
     }
-    const my = r((s.y + e.y) / 2);
-    return [s, { x: s.x, y: my }, { x: e.x, y: my }, e];
+    if (a.x <= R.l + e || a.x >= R.r - e) return false;
+    return Math.max(a.y, b.y) > R.t + e && Math.min(a.y, b.y) < R.b - e;
+  }
+  function simplify(pts) {
+    const out = [];
+    for (const p of pts) {
+      const q = out[out.length - 1];
+      if (q && Math.abs(q.x - p.x) < 0.01 && Math.abs(q.y - p.y) < 0.01) continue;
+      out.push(p);
+      // drop the middle of three points on one line
+      while (out.length >= 3) {
+        const [a, b, c] = out.slice(-3);
+        if ((Math.abs(a.x - b.x) < 0.01 && Math.abs(b.x - c.x) < 0.01) || (Math.abs(a.y - b.y) < 0.01 && Math.abs(b.y - c.y) < 0.01)) out.splice(out.length - 2, 1);
+        else break;
+      }
+    }
+    return out;
+  }
+  function score(pts, rects) {
+    let c = 0;
+    for (let i = 1; i < pts.length; i++) {
+      const a = pts[i - 1], b = pts[i];
+      if (Math.abs(a.x - b.x) > 0.01 && Math.abs(a.y - b.y) > 0.01) return Infinity; // not right-angled
+      c += Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+      for (const r of rects) if (crosses(a, b, r.rect)) c += r.weight;
+    }
+    return c + COST.bend * Math.max(0, pts.length - 2);
+  }
+
+  // `d` holds the chosen sides ('auto' or a side) for the start and the end.
+  function route(a, b, o, container, d) {
+    const A = rectOf(a, o), B = rectOf(b, o);
+    const topA = topLevel(a), topB = topLevel(b);
+    const rects = [{ rect: A, weight: COST.end }, { rect: B, weight: COST.end }];
+    if (topA.id !== a.id) rects.push({ rect: rectOf(topA, o), weight: COST.own });
+    if (topB.id !== b.id && topB.id !== topA.id) rects.push({ rect: rectOf(topB, o), weight: COST.own });
+    const others = container.children.filter((c) => c.id !== topA.id && c.id !== topB.id && c.visible && !isFlow(c) &&
+      'absoluteBoundingBox' in c && c.absoluteBoundingBox).map((c) => rectOf(c, o));
+    others.forEach((r) => rects.push({ rect: r, weight: COST.other }));
+
+    // Where detours may run: halfway, in line with the ends, and just outside every layer.
+    const all = others.concat([A, B]);
+    const xs = new Set(), ys = new Set();
+    all.forEach((r) => { xs.add(r.l - MARGIN); xs.add(r.r + MARGIN); ys.add(r.t - MARGIN); ys.add(r.b + MARGIN); });
+
+    const pick = (side) => (side && side !== 'auto' ? [side] : SIDES);
+    let best = null, bestCost = Infinity;
+    for (const sa of pick(d.fromSide)) {
+      for (const sb of pick(d.toSide)) {
+        const s = sidePoint(A, sa), e = sidePoint(B, sb);
+        const s1 = { x: s.x + NORMAL[sa].x * STUB, y: s.y + NORMAL[sa].y * STUB };
+        const e1 = { x: e.x + NORMAL[sb].x * STUB, y: e.y + NORMAL[sb].y * STUB };
+        const mids = [[{ x: e1.x, y: s1.y }], [{ x: s1.x, y: e1.y }]];
+        if (Math.abs(s1.x - e1.x) < 0.01 || Math.abs(s1.y - e1.y) < 0.01) mids.push([]);
+        const cx = new Set(xs), cy = new Set(ys);
+        cx.add((s1.x + e1.x) / 2); cy.add((s1.y + e1.y) / 2);
+        cx.forEach((x) => mids.push([{ x, y: s1.y }, { x, y: e1.y }]));
+        cy.forEach((y) => mids.push([{ x: s1.x, y }, { x: e1.x, y }]));
+        for (const m of mids) {
+          const pts = simplify([s, s1].concat(m, [e1, e]));
+          const c = score(pts, rects);
+          if (c < bestCost) { bestCost = c; best = pts; }
+        }
+      }
+    }
+    const r = (n) => Math.round(n * 10) / 10;
+    return best.map((p) => ({ x: r(p.x), y: r(p.y) }));
   }
 
   // ---------- Drawing ----------
 
-  async function drawVector(points, container, broken) {
+  async function drawVector(points, container, broken, color) {
     const v = figma.createVector();
     container.appendChild(v);
     const minX = Math.min.apply(null, points.map((p) => p.x));
@@ -2067,7 +2141,7 @@ const Flows = (() => {
     v.x = minX;
     v.y = minY;
     v.name = 'Arrow';
-    v.strokes = [solid(broken ? BROKEN_COLOR : COLOR)];
+    v.strokes = [solid(broken ? BROKEN_COLOR : color)];
     v.strokeWeight = WEIGHT;
     v.strokeJoin = 'ROUND';
     v.dashPattern = broken ? [8, 6] : [];
@@ -2076,7 +2150,7 @@ const Flows = (() => {
   }
 
   // The label: a pill in the middle of the arrow's longest stretch.
-  function drawLabel(text, points, container, font, broken) {
+  function drawLabel(text, points, container, font, broken, color) {
     const f = figma.createFrame();
     container.appendChild(f);
     f.name = 'Label';
@@ -2087,7 +2161,7 @@ const Flows = (() => {
     f.paddingLeft = f.paddingRight = 10;
     f.cornerRadius = 8;
     f.clipsContent = true;
-    f.fills = [solid(broken ? BROKEN_COLOR : COLOR)];
+    f.fills = [solid(broken ? BROKEN_COLOR : color)];
     const tx = figma.createText();
     tx.fontName = font;
     tx.fontSize = 14;
@@ -2115,11 +2189,12 @@ const Flows = (() => {
   async function render(group, d, from, to, broken) {
     const container = broken ? group.parent : containerFor(from, to);
     if (!container) throw new Error(t('Both ends must be on this page.', 'İki uç da bu sayfada olmalı.'));
-    const points = broken ? (d.points || []) : route(from, to, origin(container));
+    const points = broken ? (d.points || []) : route(from, to, origin(container), container, d);
     if (points.length < 2) return group;
     const fonts = await loadCardFonts();
-    const parts = [await drawVector(points, container, broken)];
-    if (d.label) parts.push(drawLabel(d.label, points, container, fonts.medium, broken));
+    const color = colorOf(d);
+    const parts = [await drawVector(points, container, broken, color)];
+    if (d.label) parts.push(drawLabel(d.label, points, container, fonts.medium, broken, color));
     if (!group || group.removed) {
       group = figma.group(parts, container);
     } else {
@@ -2129,7 +2204,7 @@ const Flows = (() => {
       old.forEach((c) => c.remove());
     }
     const data = Object.assign({}, d, {
-      points, sig: JSON.stringify([STYLE, points, d.label || '', !!broken]), broken: !!broken
+      points, sig: JSON.stringify([STYLE, points, d.label || '', !!broken, color]), broken: !!broken
     });
     group.name = flowName(data, broken);
     group.setSharedPluginData(NS, KEY, JSON.stringify(data));
@@ -2159,7 +2234,7 @@ const Flows = (() => {
       // Names follow renamed ends; the drawing is only redone when something actually moved.
       const next = Object.assign({}, d, { fromName: endName(from), toName: endName(to) });
       const container = containerFor(from, to);
-      const sig = container ? JSON.stringify([STYLE, route(from, to, origin(container)), d.label || '', false]) : null;
+      const sig = container ? JSON.stringify([STYLE, route(from, to, origin(container), container, d), d.label || '', false, colorOf(d)]) : null;
       if (d.broken || sig !== d.sig || (container && g.parent.id !== container.id)) await render(g, next, from, to, false);
       else if (next.fromName !== d.fromName || next.toName !== d.toName) {
         g.name = flowName(next, false);
@@ -2202,7 +2277,10 @@ const Flows = (() => {
     if (g) {
       const d = info(g);
       return post('flows', {
-        type: 'state', arrow: { id: g.id, from: d.from, to: d.to, fromName: d.fromName, toName: d.toName, label: d.label || '', broken: !!d.broken }
+        type: 'state', arrow: {
+          id: g.id, from: d.from, to: d.to, fromName: d.fromName, toName: d.toName, label: d.label || '', broken: !!d.broken,
+          color: colorOf(d), fromSide: sideOf(d.fromSide), toSide: sideOf(d.toSide)
+        }
       });
     }
     // Up to two selected layers, left to right then top to bottom, for the From / To fields.
@@ -2231,7 +2309,10 @@ const Flows = (() => {
     const e = await ends(msg);
     if (!e) return;
     const label = String(msg.label || '').trim();
-    const g = await render(null, { v: 1, from: e.from.id, to: e.to.id, fromName: endName(e.from), toName: endName(e.to), label }, e.from, e.to, false);
+    const g = await render(null, {
+      v: 1, from: e.from.id, to: e.to.id, fromName: endName(e.from), toName: endName(e.to), label,
+      color: colorOf(msg), fromSide: sideOf(msg.fromSide), toSide: sideOf(msg.toSide)
+    }, e.from, e.to, false);
     figma.currentPage.selection = [g];
     figma.commitUndo();
     await run();
@@ -2244,7 +2325,8 @@ const Flows = (() => {
     const e = await ends(msg);
     if (!e) return;
     const d = Object.assign({}, info(g), {
-      from: e.from.id, to: e.to.id, fromName: endName(e.from), toName: endName(e.to), label: String(msg.label || '').trim()
+      from: e.from.id, to: e.to.id, fromName: endName(e.from), toName: endName(e.to), label: String(msg.label || '').trim(),
+      color: colorOf(msg), fromSide: sideOf(msg.fromSide), toSide: sideOf(msg.toSide)
     });
     await render(g, d, e.from, e.to, false);
     figma.commitUndo();
