@@ -20,6 +20,7 @@ figma.showUI(__html__, { width: SIZE.width, height: SIZE.height, themeColors: tr
 
 const TOOLS = ['checklist', 'readme', 'note', 'images', 'titles', 'flows'];
 const LANG_KEY = 'pyde-lang';
+const THEME_KEY = 'pyde-theme'; // 'figma' (follow Figma), 'light' or 'dark'
 const ADMIN_KEY = 'pyde-admin-token';
 let lang = 'en';
 let active = null; // the tool on screen, null on the home screen
@@ -2898,13 +2899,18 @@ figma.ui.onmessage = async (msg) => {
       const saved = await figma.clientStorage.getAsync(LANG_KEY);
       if (saved === 'en' || saved === 'tr') lang = saved;
       await loadDrafts();
-      figma.ui.postMessage({ type: 'prefs', lang, route: startRoute });
+      const theme = await figma.clientStorage.getAsync(THEME_KEY);
+      figma.ui.postMessage({ type: 'prefs', lang, theme: theme === 'light' || theme === 'dark' ? theme : 'figma', route: startRoute });
       await Note.start();
       return Flows.start();
     }
     if (msg.type === 'collapse') {
       const s = msg.collapsed ? COLLAPSED : SIZE;
       figma.ui.resize(s.width, s.height);
+      return;
+    }
+    if (msg.type === 'setTheme') {
+      if (['figma', 'light', 'dark'].indexOf(msg.theme) !== -1) await figma.clientStorage.setAsync(THEME_KEY, msg.theme);
       return;
     }
     if (msg.type === 'setLang') {
