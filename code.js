@@ -2281,6 +2281,7 @@ const Flows = (() => {
     if (msg.type === 'refresh') return pushState();
     if (msg.type === 'overview') return sendOverview();
     if (msg.type === 'goto') return goTo(msg.id);
+    if (msg.type === 'clearSelection') { figma.currentPage.selection = []; return; }
     const actions = { create, update, remove };
     if (actions[msg.type]) {
       await actions[msg.type](msg);

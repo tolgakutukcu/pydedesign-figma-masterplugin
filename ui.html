@@ -1369,7 +1369,7 @@
 
 <script>
 // Only this plugin as a whole has a version; the tools inside it don't.
-const VERSION = '2.0.2';
+const VERSION = '2.0.3';
 const REPO = 'tolgakutukcu/pydedesign-figma-masterplugin';
 const RAW = 'https://raw.githubusercontent.com/' + REPO + '/main/';
 const VERSION_URL = RAW + 'version.json';
@@ -4037,7 +4037,7 @@ const Flows = (() => {
     $('connect').disabled = busy || !form.from || !form.to || same;
     $('remove').style.display = editing ? '' : 'none';
     $('remove').disabled = busy;
-    $('reset').disabled = busy || (!form.from && !form.to && !$('label').value && !editing && focus === 'from');
+    $('reset').disabled = busy;
   }
 
   function reset() {
@@ -4062,9 +4062,13 @@ const Flows = (() => {
     const sig = nodes.map((n) => n.id).join(',');
     if (sig === lastSel) return render();
     lastSel = sig;
-    // Leaving an arrow (selecting nothing, or something else) ends editing it, unless a field is being picked.
+    // Selecting nothing clears the fields (and ends editing an arrow), unless a new end is being picked
+    // for an arrow. Selecting something else after an arrow starts a new one.
+    if (!nodes.length) {
+      if (!(editing && focus)) reset();
+      return render();
+    }
     if (editing && !focus) reset();
-    if (!nodes.length) return render();
 
     const other = (k) => form[k === 'from' ? 'to' : 'from'];
     const known = nodes.find((n) => (form.from && n.id === form.from.id) || (form.to && n.id === form.to.id));
@@ -4181,7 +4185,12 @@ const Flows = (() => {
   $('remove').onclick = () => { if (editing && !busy) { busy = true; render(); send({ f: 'flows', type: 'remove', id: editing.id }); } };
   $('newArrow').onclick = () => { reset(); lastSel = ''; render(); };
   // Clears both ends and the label (and leaves an arrow being edited, without changing it).
-  $('reset').onclick = () => { reset(); render(); };
+  $('reset').onclick = () => {
+    reset();
+    lastSel = '';
+    render();
+    send({ f: 'flows', type: 'clearSelection' }); // the canvas selection goes too
+  };
   $('label').oninput = render;
   $('label').onkeydown = (e) => { if (e.key === 'Enter') submit(); };
   root.querySelectorAll('.tabs button').forEach((b) => { b.onclick = () => setView(b.dataset.view); });
