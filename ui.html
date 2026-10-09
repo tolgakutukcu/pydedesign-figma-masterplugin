@@ -502,13 +502,13 @@
   #s-images .status { margin-top: 10px; min-height: 16px; font-size: 11px; color: var(--figma-color-text-secondary); text-align: center; }
 
   /* ---------- Title Maker ---------- */
-  #tt-form, #tt-title, #s-titles .tidy { display: none; }
+  #tt-form, #tt-title, #s-titles .info-box { display: none; }
   #s-titles.mode-none .placeholder { display: flex; padding-bottom: 32px; }
   #s-titles.mode-ok #tt-form, #s-titles.mode-title #tt-title { display: block; }
   #s-titles .view { display: none; }
   #s-titles.view-main #tt-main, #s-titles.view-overview #tt-overview { display: block; }
   #s-titles.view-main.mode-ok .f-foot { display: flex; }
-  #s-titles.has-section #tt-tidyBox, #s-titles.has-old #tt-oldBox { display: block; }
+  #s-titles.has-section #tt-fitBox, #s-titles.has-old #tt-oldBox { display: block; }
   #s-titles .counts { color: var(--figma-color-text-secondary); }
   #s-titles .counts b { color: var(--figma-color-text); font-variant-numeric: tabular-nums; }
   #s-titles .entry .t-dot {
@@ -524,13 +524,13 @@
   #s-titles .old-actions { display: none; justify-content: space-between; gap: 6px; margin-top: 8px; }
   #s-titles .old.has-items .old-actions { display: flex; }
   #s-titles .tt-actions { display: flex; gap: 6px; margin-top: 12px; }
-  #s-titles .tidy {
+  #s-titles .info-box {
     margin-top: 20px; padding: 12px; border-radius: 10px;
     border: 1px solid var(--figma-color-border); background: var(--figma-color-bg-secondary);
   }
-  #s-titles .tidy .lbl { margin-bottom: 2px; color: var(--figma-color-text); }
+  #s-titles .info-box .lbl { margin-bottom: 2px; color: var(--figma-color-text); }
   #s-titles .old-box { border-style: dashed; }
-  #s-titles .tidy .hint { margin: 0 0 10px; }
+  #s-titles .info-box .hint { margin: 0 0 10px; }
   .check {
     display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; margin-bottom: 6px; cursor: pointer;
     border-radius: 10px; border: 1px solid var(--figma-color-border); background: var(--figma-color-bg);
@@ -585,7 +585,7 @@
   }
   #s-flows .swatches button.on { box-shadow: 0 0 0 2px var(--figma-color-text); }
 
-  /* Design ReadMe: tidy up the section */
+  /* Design ReadMe: resize the section to its content */
   #s-readme .fit-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
   #s-readme .fit-row .hint { margin: 0; }
   #s-readme .fit-row .btn { flex: none; }
@@ -850,8 +850,8 @@
             <span class="badge" id="rm-badge"></span>
           </div>
           <div class="fit-row">
-            <span class="hint" data-i18n="tidyHint"></span>
-            <button class="btn small" id="rm-tidy" data-i18n="tidy"></button>
+            <span class="hint" data-i18n="fitHint"></span>
+            <button class="btn small" id="rm-fit" data-i18n="fit"></button>
           </div>
 
           <div class="banner info" id="rm-draftBanner">
@@ -1211,17 +1211,17 @@
       </div>
 
       <!-- A single layer that looks like an old, hand-made title -->
-      <div class="tidy old-box" id="tt-oldBox">
+      <div class="info-box old-box" id="tt-oldBox">
         <div class="lbl" data-i18n="oldOne"></div>
         <div class="hint" id="tt-oldText"></div>
         <button class="btn" id="tt-convertOne" data-i18n="convertOne"></button>
       </div>
 
-      <!-- The section of the selection: tidy it up -->
-      <div class="tidy" id="tt-tidyBox">
-        <div class="lbl" id="tt-tidyLbl"></div>
-        <div class="hint" data-i18n="tidyHint"></div>
-        <button class="btn" id="tt-tidy"></button>
+      <!-- The section of the selection: resize it to its content -->
+      <div class="info-box" id="tt-fitBox">
+        <div class="lbl" id="tt-fitLbl"></div>
+        <div class="hint" data-i18n="fitHint"></div>
+        <button class="btn" id="tt-fit"></button>
       </div>
      </section>
 
@@ -1442,7 +1442,7 @@
 
 <script>
 // Only this plugin as a whole has a version; the tools inside it don't.
-const VERSION = '2.3.3';
+const VERSION = '2.4.0';
 const REPO = 'tolgakutukcu/pydedesign-figma-masterplugin';
 const RAW = 'https://raw.githubusercontent.com/' + REPO + '/main/';
 const VERSION_URL = RAW + 'version.json';
@@ -1774,7 +1774,7 @@ const ReadMe = (() => {
       ovHint: 'ReadMes on the current page are refreshed every time you open this tab. Other pages show their last known state.',
       scanAll: 'Scan all pages', scanning: 'Scanning…', all: 'All', current: 'current page',
       ovEmpty: 'No ReadMes in this file yet.', ovEmptyFilter: 'No ReadMes with this status.',
-      tidy: 'Tidy up section', tidyHint: 'ReadMe top left, screen groups 200 px apart, 100 px around everything.'
+      fit: 'Resize section', fitHint: 'Sizes the section to its content, 100 px on every side.'
     },
     tr: {
       back: 'Geri', appTitle: 'Tasarım Künyesi',
@@ -1806,7 +1806,7 @@ const ReadMe = (() => {
       ovHint: 'Bulunduğun sayfadaki künyeler bu sekmeyi her açtığında yenilenir. Diğer sayfalar bilinen son durumu gösterir.',
       scanAll: 'Tüm sayfaları tara', scanning: 'Taranıyor…', all: 'Tümü', current: 'bu sayfa',
       ovEmpty: 'Bu dosyada henüz künye yok.', ovEmptyFilter: 'Bu durumda künye yok.',
-      tidy: 'Section’ı düzenle', tidyHint: 'Künye sol üstte, ekran grupları 200 px arayla, her yönden 100 px.'
+      fit: 'Section’ı boyutlandır', fitHint: 'Section’ı içeriğine göre boyutlar, her yönden 100 px.'
     }
   };
 
@@ -2279,8 +2279,8 @@ const ReadMe = (() => {
     renderPeople();
   }
 
-  // Same as Title Maker's "Tidy up section".
-  $('tidy').onclick = () => { if (editing) send({ f: 'titles', type: 'tidy', id: editing.id }); };
+  // Same as Title Maker's "Resize section".
+  $('fit').onclick = () => { if (editing) send({ f: 'titles', type: 'fit', id: editing.id }); };
 
   return { applyLang, onMessage, save, onLeave: hideSuggest, setTeam };
 })();
@@ -3816,10 +3816,10 @@ const Titles = (() => {
       titleSel: 'Title', below: (n) => n + (n === 1 ? ' frame' : ' frames') + ' below it',
       titleHint: 'Edit the text on the canvas. Frames belong to the closest title above them that they overlap.',
       restyle: 'Update style', alignTitle: 'Line up its frames',
-      tidyLbl: (s) => 'Section “' + s + '”',
-      tidy: 'Tidy up section',
-      tidyHint: 'ReadMe top left, then the screen groups 200 px apart (titles, frames and notes together), frames 48 px apart inside them, 100 px around everything.',
-      working: 'Working…',
+      fitLbl: (s) => 'Section “' + s + '”',
+      fit: 'Resize section',
+      fitHint: 'Sizes the section to its content, 100 px on every side (like Figma’s “Resize to fit”). Nothing inside moves.',
+      working: 'Resizing…',
       tabMain: 'Title', tabOverview: 'Overview',
       oldOne: 'Looks like an old title',
       convertOne: 'Convert to title',
@@ -3848,10 +3848,10 @@ const Titles = (() => {
       titleSel: 'Başlık', below: (n) => 'Altında ' + n + ' frame',
       titleHint: 'Metni canvas’ta düzenle. Bir frame, üstündeki ve yatayda çakıştığı en yakın başlığa aittir.',
       restyle: 'Stili güncelle', alignTitle: 'Frame’lerini hizala',
-      tidyLbl: (s) => '“' + s + '” section’ı',
-      tidy: 'Section’ı düzenle',
-      tidyHint: 'Künye sol üstte, ardından ekran grupları 200 px arayla (başlıklar, frame’ler ve notlar birlikte), grup içinde frame’ler 48 px arayla, her yönden 100 px boşluk.',
-      working: 'Düzenleniyor…',
+      fitLbl: (s) => '“' + s + '” section’ı',
+      fit: 'Section’ı boyutlandır',
+      fitHint: 'Section’ı içeriğine göre, her yönden 100 px boşlukla boyutlandırır (Figma’nın “Resize to fit”i gibi). İçerideki hiçbir şey yerinden oynamaz.',
+      working: 'Boyutlandırılıyor…',
       tabMain: 'Başlık', tabOverview: 'Genel bakış',
       oldOne: 'Eski bir başlık gibi görünüyor',
       convertOne: 'Başlığa dönüştür',
@@ -3880,8 +3880,8 @@ const Titles = (() => {
     cl.toggle('has-old', !!m.old && m.status !== 'title');
     if (m.old) $('oldText').textContent = '“' + m.old.text + '”';
     ['none', 'ok', 'title'].forEach((k) => cl.toggle('mode-' + k, (m.status === 'mixed' ? 'none' : m.status) === k));
-    cl.toggle('has-section', !!m.tidy);
-    if (m.tidy) $('tidyLbl').textContent = t().tidyLbl(m.tidy.name);
+    cl.toggle('has-section', !!m.fit);
+    if (m.fit) $('fitLbl').textContent = t().fitLbl(m.fit.name);
 
     if (m.status === 'none' || m.status === 'mixed') {
       $('phIco').innerHTML = POINTER;
@@ -3904,8 +3904,8 @@ const Titles = (() => {
     $('add').textContent = busy === 'add' ? t().adding : t().add;
     $('add').disabled = !!busy || lastState.status !== 'ok' || !$('text').value.trim();
     $('restyle').disabled = !!busy;
-    $('tidy').textContent = busy === 'tidy' ? t().working : t().tidy;
-    $('tidy').disabled = !!busy;
+    $('fit').textContent = busy === 'fit' ? t().working : t().fit;
+    $('fit').disabled = !!busy;
     $('convertOne').disabled = !!busy;
     if (overview) {
       const n = overview.candidates.filter((c) => picked.has(c.id)).length;
@@ -4023,7 +4023,7 @@ const Titles = (() => {
   $('add').onclick = add;
   $('restyle').onclick = () => { if (lastState.title) run('restyle', { id: lastState.title.id }); };
   $('alignTitle').onclick = () => { if (lastState.title) run('alignTitle', { id: lastState.title.id }); };
-  $('tidy').onclick = () => { if (lastState.tidy) run('tidy', { id: lastState.tidy.id }); };
+  $('fit').onclick = () => { if (lastState.fit) run('fit', { id: lastState.fit.id }); };
   $('convertOne').onclick = () => { if (lastState.old) run('convert', { ids: [lastState.old.id] }); };
   $('convert').onclick = () => {
     if (overview) run('convert', { ids: overview.candidates.filter((c) => picked.has(c.id)).map((c) => c.id) });

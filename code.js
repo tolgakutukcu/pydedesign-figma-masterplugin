@@ -1957,7 +1957,7 @@ const Images = (() => {
 // ids, so Figma MCP / Claude can read the flow:
 //     ➜ Flow: Login › Continue (12:40) → Home (56:78) · "Tap Continue"
 // The connection is stored on the group (shared plugin data). While the plugin is open, arrows are
-// redrawn whenever one of their ends moves; Tidy up section redraws them too. An arrow whose end is gone
+// redrawn whenever one of their ends moves; lining up a title's frames redraws them too. An arrow whose end is gone
 // turns red and dashed, and is listed in the overview.
 // =====================================================================================
 
@@ -2393,7 +2393,7 @@ const Flows = (() => {
 // =====================================================================================
 // Title Maker ("Başlık Ekleyici"): adds a title bar above the selected frames and can line them up.
 // A selected title is recognised: its style can be brought up to date and its frames lined up.
-// It also tidies up a whole section ("Tidy up section"), which the Design ReadMe screen offers too.
+// It also resizes a section to its content ("Resize section"), which the Design ReadMe screen offers too.
 //
 // A title is a plain frame named "🏷 Title" with one text layer. Its text is edited on the canvas like
 // any other text; copying a title is fine too. Nothing ties a title to its frames except where they sit:
@@ -2405,10 +2405,9 @@ const Titles = (() => {
   const KEY = 'title';
   const NAME = '🏷 Title';
   const GAP = 48;        // between a title and its frames, and between frames in a group
-  const GROUP_GAP = 200; // between screen groups when tidying up a section, both ways
   const PAD = 100; // around a section's content, like Figma's own "Resize to fit" for sections
   const SCREEN_TYPES = ['FRAME', 'COMPONENT', 'COMPONENT_SET', 'INSTANCE'];
-  // What tidying up moves as a unit (with its note card and the loose layers next to it).
+  // What lining up frames moves as a unit (with its note card).
   const UNIT_TYPES = SCREEN_TYPES.concat(['GROUP', 'SECTION']);
   const PREFS_KEY = 'pyde-title-prefs';
   const TOP_DOWN = [[0, 1, 0], [-1, 0, 1]]; // gradient direction: top to bottom
@@ -2489,8 +2488,7 @@ const Titles = (() => {
     return title.parent.children.filter((c) => isUnit(c) && (titleOf(c, titles) || {}).id === title.id);
   }
 
-  // A block is a unit plus what travels with it: its Frame Note card, and (when tidying up) loose layers
-  // such as text, arrows and shapes that sit closest to it.
+  // A block is a unit plus what travels with it: its Frame Note card.
   function makeBlock(unit) {
     const nodes = [unit];
     const card = Note.cardOf(unit);
@@ -2504,11 +2502,7 @@ const Titles = (() => {
     const b = Math.max.apply(null, nodes.map((n) => n.y + n.height));
     return { x, y, width: r - x, height: b - y };
   }
-  function distance(a, b) {
-    const dx = Math.max(0, a.x - (b.x + b.width), b.x - (a.x + a.width));
-    const dy = Math.max(0, a.y - (b.y + b.height), b.y - (a.y + a.height));
-    return Math.hypot(dx, dy);
-  }
+
   function moveNodes(nodes, dx, dy) {
     if (!dx && !dy) return;
     for (const n of nodes) { n.x += dx; n.y += dy; }
@@ -2675,8 +2669,8 @@ const Titles = (() => {
 
     const o = overlaps(title);
     if (o.length) {
-      figma.notify(t('The title overlaps “' + o[0] + '”' + (o.length > 1 ? ' and ' + (o.length - 1) + ' more' : '') + '. “Tidy up section” makes room.',
-        'Başlık “' + o[0] + '”' + (o.length > 1 ? ' ve ' + (o.length - 1) + ' katman daha' : '') + ' ile çakışıyor. “Section’ı düzenle” yer açar.'));
+      figma.notify(t('The title overlaps “' + o[0] + '”' + (o.length > 1 ? ' and ' + (o.length - 1) + ' more' : '') + '. Make some room above the frames.',
+        'Başlık “' + o[0] + '”' + (o.length > 1 ? ' ve ' + (o.length - 1) + ' katman daha' : '') + ' ile çakışıyor. Frame’lerin üstünde yer aç.'));
     } else {
       figma.notify(t('Title added', 'Başlık eklendi'));
     }
@@ -2718,99 +2712,24 @@ const Titles = (() => {
     figma.notify(t('Frames lined up', 'Frame’ler hizalandı'));
   }
 
-  // Tidies up a section:
-  //  - the Design ReadMe card goes to the top-left corner, PAD from the edges;
-  //  - screen groups (a title with its frames, or a frame on its own) start PAD below the ReadMe (or at
-  //    the top), in rows that follow how they are placed now, GROUP_GAP apart both ways;
-  //  - inside a group, the frames are lined up GAP below the title, GAP apart;
-  //  - a frame moves with its Frame Note card, and loose layers (text, arrows, shapes…) with the frame
-  //    they sit closest to;
-  //  - the section is sized to PAD around its content. The section itself doesn't move.
-  async function tidy(msg) {
+  // Sizes a section to its content with PAD on every side, like Figma's own "Resize to fit" for
+  // sections. Nothing inside moves on the canvas: the section moves and resizes around its content.
+  // (Rearranging a whole section was dropped: in flow sections where screens sit is meaningful.)
+  async function fit(msg) {
     const section = msg.id ? await figma.getNodeByIdAsync(msg.id) : null;
     if (!section || section.removed || section.type !== 'SECTION') {
       return figma.notify(t('Select a section, or something inside one.', 'Bir section ya da içinden bir şey seç.'), { error: true });
     }
-    const kids = section.children.slice();
-    const readme = kids.find((c) => isReadmeCard(c) && (() => {
-      try { return JSON.parse(c.getSharedPluginData('pydespec', 'card')).kind !== 'frame'; } catch (e) { return true; }
-    })());
-    // Old, hand-made titles that haven't been converted yet count as titles too (their look stays).
-    const old = kids.filter((c) => !isTitle(c) && looksLikeTitle(c, kids));
-    const titles = kids.filter(isTitle).concat(old);
-    const oldIds = new Set(old.map((c) => c.id));
-    const blocks = kids.filter((c) => isUnit(c) && !oldIds.has(c.id)).map(makeBlock);
-    const used = new Set();
-    blocks.forEach((b) => b.nodes.forEach((n) => used.add(n.id)));
-    titles.forEach((tl) => used.add(tl.id));
-    if (readme) used.add(readme.id);
-    kids.filter(Flows.isFlow).forEach((g) => used.add(g.id)); // arrows are redrawn afterwards
-    // Loose layers travel with the closest block.
-    for (const c of kids) {
-      if (used.has(c.id) || !blocks.length) continue;
-      let best = null, bestD = Infinity;
-      for (const b of blocks) {
-        const d = distance(c, bbox([b.unit]));
-        if (d < bestD) { best = b; bestD = d; }
-      }
-      best.nodes.push(c);
-    }
-    if (!blocks.length && !titles.length && !readme) return figma.notify(t('The section is empty.', 'Section boş.'));
-
-    // Screen groups, each laid out on its own first (positions relative to the group's corner).
-    const groups = [];
-    const byTitle = new Map(titles.map((tl) => [tl.id, { title: tl, blocks: [] }]));
-    for (const b of blocks) {
-      const tl = titleOf(b.unit, titles);
-      if (tl) byTitle.get(tl.id).blocks.push(b);
-      else groups.push({ title: null, blocks: [b] });
-    }
-    titles.forEach((tl) => groups.push(byTitle.get(tl.id)));
-
-    for (const g of groups) {
-      g.moves = []; // [nodes, relX, relY, box]
-      if (g.title) {
-        const inner = arrangeRows(g.blocks.map((b) => blockItem(b, (x, y) => g.moves.push({ nodes: b.nodes, x, y, box: bbox(b.nodes) }))),
-          0, g.title.height + GAP);
-        g.width = g.blocks.length ? inner.width : g.title.width;
-        g.height = g.title.height + (g.blocks.length ? GAP + inner.height : 0);
-        g.box = bbox([].concat([g.title], ...g.blocks.map((b) => b.nodes)));
-      } else {
-        const box = bbox(g.blocks[0].nodes);
-        g.moves.push({ nodes: g.blocks[0].nodes, x: 0, y: 0, box });
-        g.width = box.width;
-        g.height = box.height;
-        g.box = box;
-      }
-    }
-
-    let top = PAD;
-    if (readme) {
-      readme.x = PAD;
-      readme.y = PAD;
-      top = PAD + readme.height + PAD;
-    }
-    arrangeRows(groups.map((g) => ({
-      box: { x: g.box.x, y: g.box.y, width: g.width, height: g.height },
-      place: (x, y) => {
-        if (g.title) {
-          g.title.x = x;
-          g.title.y = y;
-          setTitleWidth(g.title, g.width);
-        }
-        for (const m of g.moves) moveNodes(m.nodes, x + m.x - m.box.x, y + m.y - m.box.y);
-      }
-    })), PAD, top, GROUP_GAP);
-
-    await Flows.sync(); // the arrows follow their ends
-    const content = section.children.filter((c) => !Flows.isFlow(c));
-    const box = bbox(content.length ? content : section.children);
-    section.resizeWithoutConstraints(Math.max(1, box.x + box.width + PAD), Math.max(1, box.y + box.height + PAD));
+    const kids = section.children.filter((c) => c.visible);
+    if (!kids.length) return figma.notify(t('The section is empty.', 'Section boş.'));
+    const box = bbox(kids);
+    const dx = PAD - box.x, dy = PAD - box.y;
+    for (const c of section.children) { c.x += dx; c.y += dy; }
+    section.x -= dx;
+    section.y -= dy;
+    section.resizeWithoutConstraints(Math.max(1, box.width + 2 * PAD), Math.max(1, box.height + 2 * PAD));
     figma.commitUndo();
-    figma.notify(old.length
-      ? t('Section tidied up. ' + old.length + ' old ' + (old.length === 1 ? 'title was' : 'titles were') + ' treated as titles; convert them in the Overview tab.',
-        'Section düzenlendi. ' + old.length + ' eski başlık, başlık olarak dizildi; Genel bakış’tan dönüştürebilirsin.')
-      : t('Section tidied up', 'Section düzenlendi'));
+    figma.notify(t('Section resized to its content', 'Section içeriğine göre boyutlandırıldı'));
   }
 
   // ---------- Old titles ----------
@@ -2935,11 +2854,11 @@ const Titles = (() => {
 
   function pushState() {
     const sec = selectedSection();
-    const tidyTarget = sec ? { id: sec.id, name: sec.name } : null;
+    const fitTarget = sec ? { id: sec.id, name: sec.name } : null; // for "Resize section"
     const title = selectedTitle();
     if (title) {
       return post('titles', {
-        type: 'state', status: 'title', tidy: tidyTarget,
+        type: 'state', status: 'title', fit: fitTarget,
         title: { id: title.id, text: titleText(title), frames: groupUnits(title).length }
       });
     }
@@ -2948,11 +2867,11 @@ const Titles = (() => {
     const one = sel.length === 1 ? topLevel(sel[0]) : null;
     const old = one && convertible(one) ? { id: one.id, text: convertible(one).children[0].characters.trim() } : null;
     const frames = selectedFrames();
-    if (!frames.length) return post('titles', { type: 'state', status: 'none', tidy: tidyTarget, old });
+    if (!frames.length) return post('titles', { type: 'state', status: 'none', fit: fitTarget, old });
     const parent = frames[0].parent;
-    if (frames.some((f) => f.parent.id !== parent.id)) return post('titles', { type: 'state', status: 'mixed', tidy: tidyTarget });
+    if (frames.some((f) => f.parent.id !== parent.id)) return post('titles', { type: 'state', status: 'mixed', fit: fitTarget });
     post('titles', {
-      type: 'state', status: 'ok', tidy: tidyTarget, old, count: frames.length,
+      type: 'state', status: 'ok', fit: fitTarget, old, count: frames.length,
       name: frames.length === 1 ? frames[0].name : null,
       section: parent.type === 'SECTION' ? parent.name : null,
       page: figma.currentPage.name
@@ -2970,7 +2889,7 @@ const Titles = (() => {
     if (msg.type === 'setPrefs') return figma.clientStorage.setAsync(PREFS_KEY, { align: !!msg.align });
     if (msg.type === 'overview') return sendOverview();
     if (msg.type === 'goto') return goTo(msg.id);
-    const actions = { add, restyle, alignTitle, tidy, convert };
+    const actions = { add, restyle, alignTitle, fit, convert };
     if (actions[msg.type]) {
       await actions[msg.type](msg);
       post('titles', { type: 'done', action: msg.type });

@@ -85,7 +85,7 @@ Don't edit the card's text by hand — it is redrawn from the form on every save
 
 The section name shows its status after an em dash, updated on every save: `Checkout Flow — 🚧 Work in progress`, `— 👀 In review`, `— ✅ Ready for development`. Removing the ReadMe removes the suffix.
 
-**Tidy up section** (under the selected section) is the same as in Title Maker (see below). It works on any section, with or without a ReadMe.
+**Resize section** (under the selected section) sizes the section to its content with 100 px on every side, like Figma's own *Resize to fit*. Nothing inside moves on the canvas; the section moves and resizes around it. It works on any section, with or without a ReadMe.
 
 The **Overview** tab lists every ReadMe in the file. The current page is rescanned each time you open the tab; other pages show their last known state. **Scan all pages** refreshes everything.
 
@@ -117,7 +117,7 @@ The card appears right below the frame, exactly as wide as the frame, in the sam
 
 ## Title Maker
 
-**Adding a title**: select one or more frames (in the same section, or all directly on the page), type the title and click **Add title** (or press Enter). The title goes 48 px above the top frame and is as wide as the frames; nothing else moves. If it covers something there, the plugin says so — **Tidy up section** makes room.
+**Adding a title**: select one or more frames (in the same section, or all directly on the page), type the title and click **Add title** (or press Enter). The title goes 48 px above the top frame and is as wide as the frames; nothing else moves. If it covers something there, the plugin says so.
 
 - **Line up the frames** (on by default, remembered per person): rows follow how the frames are placed now (frames that overlap vertically are one row). The rows start 48 px below the title, frames are 48 px apart and aligned at the top. A frame with a Frame Note counts together with its card, so notes never land on the next row.
 
@@ -125,13 +125,9 @@ The card appears right below the frame, exactly as wide as the frame, in the sam
 
 **Old titles**: titles made by hand before this plugin (by different designers, in different styles) can be turned into plugin titles. The **Overview** tab lists the titles on the current page and, under **Old titles**, the layers that look like one in the selected section (or on the current page): a frame — or a group holding just one frame — with a single text in it, sitting directly in a section or on the page, filled, flat and wide (24–160 px high, at least 3.5× as wide as high), with screens right below it. Coloured bars without text are skipped. They all come ticked; untick the ones that aren't titles and click **Convert**. A converted title gets the current style and keeps its text and width; a title that was alone in a group comes out of it. Selecting a single such layer also offers **Convert to title**, even when it doesn't match the shape rules. Clicking a row selects that layer.
 
-**Tidy up section** (also on the Design ReadMe screen) rearranges the section the selection is in:
+**Resize section** (also on the Design ReadMe screen) sizes the section the selection is in to its content, 100 px on every side. Nothing inside moves.
 
-- The Design ReadMe card goes to the top-left corner, 100 px from the edges.
-- The screen groups start 100 px below the ReadMe (or 100 px from the top). A group is a title with its frames, or a frame on its own. Groups are laid out in rows that follow how they are placed now, 200 px apart both ways.
-- Inside a group, the frames are lined up 48 px below the title, 48 px apart, and the title is as wide as them.
-- A frame moves with its Frame Note card, and loose layers (text, arrows, shapes…) move with the frame they sit closest to. Nested sections, groups and component sets move as one piece.
-- The section is sized to 100 px around its content (like Figma's own *Resize to fit*); the section itself stays in place. One ⌘Z / Ctrl+Z undoes it all.
+There is deliberately no "rearrange the whole section": in flow sections where screens sit (branches below, steps side by side, room for arrows) carries meaning the plugin can't know. Lining up stays per title.
 
 The title is a frame named `🏷 Title` with one text layer: DM Sans Semi Bold 34 / 36 in white on a `#7B7D83` → `#5C5E66` gradient (top to bottom), with a 1 px white stroke fading from 40% at the top to 0 at the bottom and 8 px corners. Edit its text on the canvas like any other text; copying a title is fine.
 
@@ -150,7 +146,7 @@ The arrow (4 px, a dot where it starts and a filled triangle where it ends, labe
 ➜ Flow: Login › Continue (12:40) → Home (56:78) · "Tap Continue"
 ```
 
-While the plugin is open (on any tool), arrows are redrawn when one of their ends moves, resizes or is renamed, and **Tidy up section** / lining up frames redraws them too. If an end is deleted, the arrow turns red and dashed (`➜ Flow (broken): …`) and is listed under **Broken arrows** in the **Overview** tab, where it can be deleted. The **Overview** lists all arrows on the current page.
+While the plugin is open (on any tool), arrows are redrawn when one of their ends moves, resizes or is renamed, and lining up a title's frames redraws them too. If an end is deleted, the arrow turns red and dashed (`➜ Flow (broken): …`) and is listed under **Broken arrows** in the **Overview** tab, where it can be deleted. The **Overview** lists all arrows on the current page.
 
 Figma doesn't let plugins create the FigJam-style connectors in design files, which is why the plugin draws its own arrows.
 
