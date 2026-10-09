@@ -105,11 +105,11 @@ The card appears right below the frame, exactly as wide as the frame, in the sam
 
 - Select several frames to add the same paragraph to all of them.
 - While the plugin is open (on any tool), a card follows its frame when the frame is moved, resized or renamed. Anything that drifted while the plugin was closed is fixed the next time it is opened on that page.
-- Duplicating a frame duplicates its note.
+- **A note exists only while it has a card.** Deleting a card removes the note (undo brings both back). Duplicating a frame together with its card (⌘D or Alt-drag both) gives the copy its own note; duplicating the frame alone gives a frame without a note.
 - **Broken notes**: a card that no frame owns — its frame was deleted, it was copied on its own, or its frame was moved inside another layer — is never deleted by the plugin. When the plugin opens, it renames it `📝 Note (broken: …) → …`, covers it with a red warning and lists it under **Broken notes** in the **Overview** tab, where it can be fixed or deleted. Undoing a frame's deletion brings its card back to normal.
 - **Fixing a broken note**: select the card and click **Fix**. If a frame sits right above the card (its bottom edge at most 100 px above it, overlapping it horizontally), it is suggested; otherwise, or to pick another one, select a frame on the canvas, then **Attach note**. The note keeps its paragraphs, authors and dates. If that frame already has a note, the paragraphs are added at the end (identical ones are skipped) and the broken card goes away. Fixing a copied card leaves the original note untouched.
 - **Text edited on the card**: if someone changes a paragraph right on the card, the plugin takes that text into the note the next time it opens on that page (or right away while it is open). The card isn't redrawn for it, so the person typing isn't interrupted.
-- Don't copy a card or edit its text by hand (the card says so too) — use the plugin. Don't delete a card to remove a note — use **Remove** in the plugin.
+- Don't copy a card or edit its text by hand (the card says so too) — use the plugin. To remove a note, delete its card or use **Remove** in the plugin.
 
 ## Title Maker
 

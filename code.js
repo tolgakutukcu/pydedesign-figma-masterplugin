@@ -880,6 +880,13 @@ const Note = (() => {
       return null;
     }
   }
+  // A note only exists while it has a card: a frame whose card was deleted (or that was copied without
+  // its card) has no note. Its data is left on the frame untouched (the plugin writes nothing when a card
+  // is deleted), so undoing the deletion brings the card and the note back together.
+  function activeNote(frame) {
+    const data = readNote(frame);
+    return data && findCard(frame) ? data : null;
+  }
   function writeNote(node, data) {
     node.setSharedPluginData(NS, KEY, data ? JSON.stringify(data) : '');
   }
@@ -1233,14 +1240,16 @@ const Note = (() => {
   // ---------- Page sync ----------
   // Matches every card on a page to its frame, then fixes positions, content and the overview index.
 
-  async function syncPage(page) {
+  // `tidy` also drops overview entries of frames that no longer have a note on this page. That is a
+  // write, so it only happens when someone opens the overview or scans, not while editing.
+  async function syncPage(page, tidy) {
     await page.loadAsync();
     const frames = notedFramesOn(page);
     const cards = cardsOn(page);
     const owner = new Map(); // frame id → card
     const pending = [];
 
-    // 1. A card sitting right below a frame with a note belongs to that frame. This also handles
+    // 1. A card sitting right below a frame with note data belongs to that frame. This also handles
     //    copies: duplicating a frame together with its card gives a new card that still names the
     //    original frame, but sits below the copy.
     for (const card of cards) {
@@ -1273,19 +1282,21 @@ const Note = (() => {
     let fontsReady = false;
     const fonts = async () => { if (!fontsReady) { await ensureFonts(); fontsReady = true; } };
 
-    // 3. Every frame with a note gets an up-to-date card (a copied frame gets a card of its own).
+    // 3. Every frame with a card gets it brought up to date. A frame without a card has no note:
+    //    its card was deleted, or it was copied without it. Nothing is drawn or written for it.
     for (const frame of frames) {
       let data = readNote(frame);
       const card = owner.get(frame.id);
-      const edited = card && handEdits(card, data);
+      if (!card) continue;
+      const edited = handEdits(card, data);
       if (edited) {
         // The card already shows the new text: only the data (and the card's record of it) change.
         data = edited;
         writeNote(frame, data);
         writeCardInfo(card, frame, data);
       }
-      if (!card || isStale(card, frame, data)) await fonts();
-      if (card) refreshCard(card, frame, data); else createCard(frame, data);
+      if (isStale(card, frame, data)) await fonts();
+      refreshCard(card, frame, data);
       writeIndex(frame, data);
     }
 
@@ -1295,9 +1306,10 @@ const Note = (() => {
       markBroken(l.card, l.reason);
     }
 
-    const found = new Set(frames.map((f) => f.id));
-    for (const e of readIndex()) {
-      if (e.pageId === page.id && !found.has(e.id)) removeIndex(e.id);
+    if (tidy) {
+      for (const e of readIndex()) {
+        if (e.pageId === page.id && !owner.has(e.id)) removeIndex(e.id);
+      }
     }
     return lost.map((l) => ({ id: l.card.id, name: cardInfo(l.card).frameName || '?', reason: l.reason }));
   }
@@ -1375,7 +1387,7 @@ const Note = (() => {
   }
 
   async function sendOverview() {
-    orphans = await syncPage(figma.currentPage);
+    orphans = await syncPage(figma.currentPage, true);
     post('note', { type: 'overview', entries: readIndex(), orphans, currentPageId: figma.currentPage.id });
   }
 
@@ -1427,7 +1439,7 @@ const Note = (() => {
       return post('note', {
         type: 'state', status: 'ok',
         target: { id: f.id, name: f.name, section: sectionOf(f), page: p ? p.name : '' },
-        note: readNote(f),
+        note: activeNote(f),
         draft: getDraft('note', f.id),
         overlaps: overlaps(findCard(f)),
         me: userName()
@@ -1438,7 +1450,7 @@ const Note = (() => {
         type: 'state', status: 'multiple',
         draft: getDraft('note', multiKey(frames.map((f) => f.id))),
         frames: frames.map((f) => {
-          const d = readNote(f);
+          const d = activeNote(f);
           return { id: f.id, name: f.name, section: sectionOf(f), count: d ? d.entries.length : 0 };
         })
       });
@@ -1473,7 +1485,7 @@ const Note = (() => {
       if (gap < -1 || gap > SUGGEST_RANGE || overlap <= 0) continue;
       if (gap < bestGap) { best = c; bestGap = gap; }
     }
-    return best ? { id: best.id, name: best.name, hasNote: !!readNote(best) } : null;
+    return best ? { id: best.id, name: best.name, hasNote: !!activeNote(best) } : null;
   }
 
   // Attaches a broken card's note to a frame. If the frame already has a note, the card's paragraphs
@@ -1490,7 +1502,7 @@ const Note = (() => {
     if (!entries.length) {
       return figma.notify(t('This card has no note text to attach.', 'Bu kartta bağlanacak not metni yok.'), { error: true });
     }
-    const old = readNote(frame);
+    const old = activeNote(frame);
     const have = new Set((old ? old.entries : []).map((e) => e.text.trim()));
     const added = entries.filter((e) => e.text && e.text.trim() && !have.has(e.text.trim()))
       .map((e) => ({ id: newId(), text: e.text.trim(), by: e.by || 'Unknown', at: e.at || Date.now() }));
@@ -1565,7 +1577,7 @@ const Note = (() => {
   async function save(msg) {
     const frame = await getFrame(msg.id);
     if (!frame) return;
-    const old = readNote(frame);
+    const old = activeNote(frame);
     const prev = new Map((old ? old.entries : []).map((e) => [e.id, e]));
     const now = Date.now();
     const me = userName();
@@ -1593,7 +1605,7 @@ const Note = (() => {
     for (const id of Array.isArray(msg.ids) ? msg.ids : []) {
       const frame = await getFrame(id);
       if (!frame) continue;
-      const data = readNote(frame) || { v: 1, entries: [] };
+      const data = activeNote(frame) || { v: 1, entries: [] };
       data.entries.push({ id: newId(), text: body, by: me, at: now });
       const card = await apply(frame, data);
       if (overlaps(card).length) warnOverlaps(card);
@@ -1655,7 +1667,7 @@ const Note = (() => {
     if (msg.type === 'overview') return sendOverview();
     if (msg.type === 'scanAll') {
       await figma.loadAllPagesAsync();
-      for (const page of figma.root.children) await syncPage(page);
+      for (const page of figma.root.children) await syncPage(page, true);
       figma.notify(t('All pages scanned', 'Tüm sayfalar tarandı'));
       return sendOverview();
     }
