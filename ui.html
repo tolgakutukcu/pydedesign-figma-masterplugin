@@ -1410,7 +1410,7 @@
 
 <script>
 // Only this plugin as a whole has a version; the tools inside it don't.
-const VERSION = '2.1.0';
+const VERSION = '2.1.1';
 const REPO = 'tolgakutukcu/pydedesign-figma-masterplugin';
 const RAW = 'https://raw.githubusercontent.com/' + REPO + '/main/';
 const VERSION_URL = RAW + 'version.json';
@@ -3256,7 +3256,9 @@ const Admin = (() => {
       cancel: 'Cancel',
       published: 'Published', publishedText: 'Others get it the next time they open the plugin (GitHub can take a few minutes).',
       conflict: 'The file changed on GitHub in the meantime', conflictText: 'Nothing was published. Use Discard to load the latest version, then make your changes again.',
-      failed: 'Couldn’t publish', loadFailed: 'Couldn’t load from GitHub', retry: 'Use Discard to try again.'
+      failed: 'Couldn’t publish', loadFailed: 'Couldn’t load from GitHub', retry: 'Use Discard to try again.',
+      noWrite: 'The key can’t write to the repo',
+      noWriteText: 'On GitHub, edit the token: Repository access → Only select repositories → ' + REPO.split('/')[1] + ', and Repository permissions → Contents → Read and write. Then publish again; the key stays the same.'
     },
     tr: {
       back: 'Geri',
@@ -3287,7 +3289,9 @@ const Admin = (() => {
       cancel: 'Vazgeç',
       published: 'Yayınlandı', publishedText: 'Diğerlerine plugin’i bir sonraki açışlarında geçer (GitHub birkaç dakika gecikebilir).',
       conflict: 'Dosya bu arada GitHub’da değişmiş', conflictText: 'Hiçbir şey yayınlanmadı. “Değişiklikleri at” ile güncel hali yükleyip değişikliklerini tekrar yap.',
-      failed: 'Yayınlanamadı', loadFailed: 'GitHub’dan yüklenemedi', retry: 'Tekrar denemek için “Değişiklikleri at”a bas.'
+      failed: 'Yayınlanamadı', loadFailed: 'GitHub’dan yüklenemedi', retry: 'Tekrar denemek için “Değişiklikleri at”a bas.',
+      noWrite: 'Bu key repoya yazamıyor',
+      noWriteText: 'GitHub’da token’ı düzenle: Repository access → Only select repositories → ' + REPO.split('/')[1] + ', Repository permissions → Contents → Read and write. Sonra tekrar yayınla; key aynı kalır.'
     }
   };
 
@@ -3346,6 +3350,8 @@ const Admin = (() => {
       body: JSON.stringify({ message, content: toB64(text), sha, branch: 'main' })
     });
     if (res.status === 409) return 'conflict';
+    // The token works but may not write to this repo (no repository access, or Contents not "Read and write").
+    if (res.status === 403 || res.status === 404) return 'noWrite';
     if (!res.ok) {
       let detail = '';
       try { detail = (await res.json()).message || ''; } catch (e) {}
@@ -3708,7 +3714,7 @@ const Admin = (() => {
     } else if (result === 'conflict') {
       msg = { kind: 'err', title: t().conflict, text: t().conflictText };
     } else {
-      msg = { kind: 'err', title: t().failed, text: result };
+      msg = result === 'noWrite' ? { kind: 'err', title: t().noWrite, text: t().noWriteText } : { kind: 'err', title: t().failed, text: result };
     }
     renderAll();
   }
